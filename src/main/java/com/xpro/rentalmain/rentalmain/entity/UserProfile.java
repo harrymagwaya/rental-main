@@ -1,0 +1,52 @@
+package com.xpro.rentalmain.rentalmain.entity;
+
+
+import java.time.LocalDate;
+import java.util.UUID;
+
+import com.xpro.rentalmain.rentalmain.model.Gender;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Entity
+@AllArgsConstructor
+@Builder
+public class UserProfile {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
+
+    @Column(unique = true)
+    private String username;      // Unique identifier for login
+
+    private String password;      // Hashed password (never store in plain text!)
+    
+    private String email;         // Contact/recovery info
+
+    private String profilePhoto;
+    
+    private boolean enabled;
+
+    private String firstName;
+    private String lastName;
+    private String middleName;
+    private LocalDate dateOfBirth;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    private UUID profilePicture;
+
+    @OneToOne
+    @JoinColumn(name = "home_address_id", referencedColumnName = "id")
+    private Address homeAddress;
+
+    @OneToOne
+    @JoinColumn(name = "work_address_id", referencedColumnName = "id")
+    private Address workAddress;
+    
+}
