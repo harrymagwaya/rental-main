@@ -1,5 +1,6 @@
 package com.xpro.rentalmain.rentalmain.config;
 
+import com.xpro.rentalmain.rentalmain.entity.UserIdentity;
 import com.xpro.rentalmain.rentalmain.model.UserStatus;
 import com.xpro.rentalmain.rentalmain.model.UserType;
 import org.springframework.security.core.GrantedAuthority;
@@ -35,15 +36,15 @@ public class UserPrincipal implements UserDetails {
     }
 
 
-    public static UserPrincipal createUser(User user){
-        List <GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getType()));
+    public static UserPrincipal createUser(UserIdentity user){
+        List <GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getUserType()));
         return new UserPrincipal(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getType(),
-                user.getStatus(),
+                user.getUserType(),
+                user.getUserStatus(),
                 authorities
         );
     }

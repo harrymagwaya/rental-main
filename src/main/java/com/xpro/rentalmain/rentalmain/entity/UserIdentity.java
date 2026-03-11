@@ -1,6 +1,8 @@
 package com.xpro.rentalmain.rentalmain.entity;
 
 
+import com.xpro.rentalmain.rentalmain.model.UserStatus;
+import com.xpro.rentalmain.rentalmain.model.UserType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,6 +30,8 @@ public class UserIdentity {
     @Column(nullable = false)
     private String password;
 
-    // --- Security Status ---
-    private boolean enabled = true;
+    private UserStatus userStatus;
+
+    private UserType userType;
+
 }

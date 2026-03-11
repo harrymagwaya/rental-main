@@ -17,7 +17,7 @@ import lombok.Data;
 public class UserProfile {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "user_id", updatable = false, nullable = false)
     private UUID id;
 
     @Column(unique = true)
@@ -28,8 +28,7 @@ public class UserProfile {
     private String email;         // Contact/recovery info
 
     private String profilePhoto;
-    
-    private boolean enabled;
+
 
     private String firstName;
     private String lastName;
