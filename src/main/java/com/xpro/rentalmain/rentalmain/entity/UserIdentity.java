@@ -1,6 +1,7 @@
 package com.xpro.rentalmain.rentalmain.entity;
 
 
+import com.xpro.rentalmain.rentalmain.model.Auditable;
 import com.xpro.rentalmain.rentalmain.model.UserStatus;
 import com.xpro.rentalmain.rentalmain.model.UserType;
 import jakarta.persistence.*;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @Entity
 @AllArgsConstructor
 @Builder
-public class UserIdentity {
+public class UserIdentity extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
