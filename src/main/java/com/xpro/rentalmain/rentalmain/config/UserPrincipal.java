@@ -1,10 +1,11 @@
 package com.xpro.rentalmain.rentalmain.config;
 
-import com.xpro.rentalmain.rentalmain.entity.UserIdentity;
+import com.xpro.rentalmain.rentalmain.entity.User;
 import com.xpro.rentalmain.rentalmain.model.UserStatus;
 import com.xpro.rentalmain.rentalmain.model.UserType;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
 import org.springframework.security.core.userdetails.UserDetails;
 
 
@@ -17,33 +18,31 @@ import java.util.UUID;
 public class UserPrincipal implements UserDetails {
 
     private final UUID id;
-    private final String username;
     private final String password;
     private final String email;
-    private final UserType userType;
+    private final UserType userRole;
     private final UserStatus status;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public UserPrincipal(UUID id, String username, String email, String password, UserType type,UserStatus status, Collection<? extends GrantedAuthority> authorities){
+    public UserPrincipal(UUID id, String username, String email, String password, UserType role,UserStatus status, Collection<? extends GrantedAuthority> authorities){
         this.id = id;
-        this.username = username;
         this.password  = password;
         this.email = email;
-        this.userType = type;
+        this.userRole = role;
         this.authorities = authorities;
         this.status = status;
 
     }
 
 
-    public static UserPrincipal createUser(UserIdentity user){
-        List <GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getUserType()));
+    public static UserPrincipal createUser(User user){
+        List <GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
         return new UserPrincipal(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
                 user.getPassword(),
-                user.getUserType(),
+                user.getRole(),
                 user.getUserStatus(),
                 authorities
         );
@@ -54,7 +53,8 @@ public class UserPrincipal implements UserDetails {
         return authorities;
     }
 
-    public UUID getId(){
+
+    public UUID getId() {
         return id;
     }
 
@@ -62,17 +62,22 @@ public class UserPrincipal implements UserDetails {
         return email;
     }
 
+    public UserType getUserRole() {
+        return userRole;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
     @Override
     public String getPassword() {
         return password;
     }
 
+    @Override
     public String getUsername() {
-        return username;
-    }
-
-    public UserType getUserType(){
-        return userType;
+        return String.valueOf(id);
     }
 
     @Override
@@ -89,7 +94,4 @@ public class UserPrincipal implements UserDetails {
         return true;
     }
 
-    public UserStatus getStatus() {
-        return status;
-    }
 }

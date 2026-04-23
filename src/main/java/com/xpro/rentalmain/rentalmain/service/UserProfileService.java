@@ -1,6 +1,5 @@
 package com.xpro.rentalmain.rentalmain.service;
 
-import com.xpro.rentalmain.rentalmain.entity.UserIdentity;
 import com.xpro.rentalmain.rentalmain.entity.UserProfile;
 import com.xpro.rentalmain.rentalmain.repository.UserProfileRepository;
 import jakarta.persistence.EntityNotFoundException;

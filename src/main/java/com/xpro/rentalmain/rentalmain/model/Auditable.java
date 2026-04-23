@@ -1,41 +1,34 @@
 package com.xpro.rentalmain.rentalmain.model;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
-public  abstract class Auditable {
+@Data // Or @Getter/@Setter
+@SuperBuilder // <--- This is the key
+@NoArgsConstructor
+@MappedSuperclass
+public abstract class Auditable {
 
-    @CreatedBy
-    @Column(updatable = false)
-    private String createdBy;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-    @CreatedDate
-    @Column(updatable = false)
-    private ZonedDateTime createdAt;
+    private UUID createdBy;
 
-    @LastModifiedBy
-    private String lastModifiedBy;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-    @LastModifiedDate
-    private ZonedDateTime lastModifiedAt;
+    private UUID updatedBy;
 
     @PrePersist
     protected void onCreate() {
-        // Runs once, the first time the record is saved
-        this.createdAt = ZonedDateTime.now();
-        this.lastModifiedAt = ZonedDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        // Runs every time 'save' is called on an existing record
-        this.lastModifiedAt = ZonedDateTime.now();
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 }
