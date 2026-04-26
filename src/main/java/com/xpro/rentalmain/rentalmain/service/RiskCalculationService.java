@@ -11,6 +11,8 @@ import com.xpro.rentalmain.rentalmain.repository.TenantFeatureLinkRepository;
 import com.xpro.rentalmain.rentalmain.service.model.CreditRiskModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,23 @@ public class RiskCalculationService {
     private final TenantFeatureLinkRepository linkRepo;
     private final CreditScoreRepository scoreRepo;
     private final CreditRiskModel riskModel; // Our Math Engine
+
+
+
+
+    @Transactional(readOnly = true)
+    public RiskScore calculateTenantRiskScore(UUID tenantId) {
+        // Get the active link
+        TenantFeatureLink link = linkRepo.findByTenantIdAndIsActiveTrue(tenantId)
+                .orElseThrow(() -> new RuntimeException("No active feature link for tenant: " + tenantId));
+
+        // Load the snapshot
+        BehavioralFeatures features = featureRepo.findById(link.getFeatureSnapshotId())
+                .orElseThrow(() -> new RuntimeException("Feature snapshot data missing"));
+
+        // Generate score via Math Engine (Cache + Entity Map)
+        return riskModel.predict(features);
+    }
 
     /**
      * The Public Method called by your Controller to generate and persist a score.
@@ -58,6 +77,11 @@ public class RiskCalculationService {
         creditScore.setScoredAt(LocalDateTime.now());
 
         return scoreRepo.save(creditScore);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CreditScore> getRankedLeaderboardPaged(int page, int size) {
+        return scoreRepo.findAllLatestRankedPaged(PageRequest.of(page, size));
     }
 
     /**

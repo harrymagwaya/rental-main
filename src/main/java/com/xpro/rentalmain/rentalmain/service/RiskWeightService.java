@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,7 +35,7 @@ public class RiskWeightService {
      * Updates a single weight, logs the actor, and fires a sync event.
      */
     @Transactional
-    public RiskWeight updateWeight(String key, BigDecimal val, String actorId) {
+    public RiskWeight updateWeight(String key, BigDecimal val, UUID actorId) {
         log.info("Actor [{}] is updating weight [{}] to [{}]", actorId, key, val);
 
         RiskWeight weight = repository.findByFeatureKey(key).orElseGet(RiskWeight::new);
@@ -54,7 +55,7 @@ public class RiskWeightService {
      * Bulk update method if your frontend still sends a Map of weights.
      */
     @Transactional
-    public List<RiskWeight> updateWeights(Map<String, BigDecimal> newWeights, String actorId) {
+    public List<RiskWeight> updateWeights(Map<String, BigDecimal> newWeights, UUID actorId) {
         return newWeights.entrySet().stream()
                 .map(entry -> updateWeight(entry.getKey(), entry.getValue(), actorId))
                 .collect(Collectors.toList());
@@ -65,5 +66,37 @@ public class RiskWeightService {
      */
     public BigDecimal getActiveWeight(String featureKey) {
         return riskWeightCache.getWeight(featureKey);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RiskWeight> getAllWeights() {
+        return repository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public RiskWeight getWeightById(UUID id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Weight configuration not found: " + id));
+    }
+
+    @Transactional
+    public void deleteWeight(UUID id) {
+        repository.deleteById(id);
+        log.warn("Weight [{}] was permanently deleted.", id);
+        // Note: You might want to fire a 'WeightDeletedEvent' to clear Redis!
+    }
+
+    /**
+     * Soft Delete: Keeps the record but the scoring engine will ignore it.
+     */
+    @Transactional
+    public RiskWeight toggleWeightStatus(UUID id, boolean active) {
+        RiskWeight weight = repository.findById(id).orElseThrow();
+        weight.setActive(active);
+        RiskWeight saved = repository.save(weight);
+
+        // Notify cache to refresh
+        eventPublisher.publishEvent(new WeightUpdatedEvent(saved.getId()));
+        return saved;
     }
 }
