@@ -125,11 +125,39 @@
 		</dependency>
 
 
+<!--		<dependency>-->
+<!--			<groupId>org.springframework.boot</groupId>-->
+<!--			<artifactId>spring-boot-starter-webflux</artifactId>-->
+<!--		</dependency>-->
+<!--		-->
+<!--			<dependency>-->
+<!--				<groupId>org.springframework.boot</groupId>-->
+<!--				<artifactId>spring-boot-starter-web</artifactId>-->
+<!--			</dependency>-->
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-data-jpa</artifactId>
+			</dependency>
+
+			<dependency>
+				<groupId>org.redisson</groupId>
+				<artifactId>redisson-spring-boot-starter</artifactId>
+				<version>3.27.0</version> </dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webflux</artifactId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-	</dependencies>
+
+		<!-- Source: https://mvnrepository.com/artifact/org.redisson/redisson -->
+		<dependency>
+			<groupId>org.redisson</groupId>
+			<artifactId>redisson</artifactId>
+			<version>4.3.0</version>
+			<scope>compile</scope>
+		</dependency>
+		</dependencies>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
