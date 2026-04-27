@@ -1,6 +1,8 @@
 package com.xpro.rentalmain.rentalmain.controller;
 
 import com.xpro.rentalmain.rentalmain.component.RiskWeightCache;
+import com.xpro.rentalmain.rentalmain.dto.RiskWeightCreateRequest;
+import com.xpro.rentalmain.rentalmain.dto.RiskWeightUpdateRequest;
 import com.xpro.rentalmain.rentalmain.entity.RiskWeight;
 import com.xpro.rentalmain.rentalmain.service.RiskWeightService;
 import com.xpro.rentalmain.rentalmain.util.Constants;
@@ -27,6 +29,11 @@ public class RiskWeightController {
         return weightService.getAllWeights();
     }
 
+    @PostMapping
+    public RiskWeight create(@RequestBody RiskWeightCreateRequest request) {
+        return weightService.createWeight(request);
+    }
+
     // 2. Fetch a specific weight by ID
     @GetMapping("/{id}")
     public RiskWeight getOne(@PathVariable UUID id) {
@@ -35,20 +42,24 @@ public class RiskWeightController {
 
     // 3. Create or Update a single weight
     // Request Param 'actorId' would typically come from your Security Principal
-    @PutMapping("/{key}")
+    @PatchMapping("/{key}")
     public RiskWeight update(
-            @PathVariable String key,
-            @RequestParam BigDecimal value,
+            @PathVariable UUID weightId,
+            @RequestBody RiskWeightUpdateRequest request,
             @RequestHeader(Constants.ACTOR_ID) UUID actorId) {
-        return weightService.updateWeight(key, value, actorId);
+        return weightService.updateWeight(weightId, request, actorId);
     }
 
-    // 4. Bulk update (Useful for a "Save All" button on a settings page)
-    @PostMapping("/bulk-update")
+
+    /**
+     * BULK UPDATE: POST /api/v1/admin/weights/bulk?actorId={actorId}
+     * Body: { "uuid-1": {"weightValue": 0.5, "active": true}, "uuid-2": {...} }
+     */
+    @PostMapping("/bulk")
     public List<RiskWeight> bulkUpdate(
-            @RequestBody Map<String, BigDecimal> newWeights,
+            @RequestBody Map<UUID, RiskWeightUpdateRequest> updates,
             @RequestHeader(Constants.ACTOR_ID) UUID actorId) {
-        return weightService.updateWeights(newWeights, actorId);
+        return weightService.updateBulkWeights(updates, actorId);
     }
 
     // 5. Soft Delete / Deactivate

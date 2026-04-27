@@ -1,6 +1,8 @@
 package com.xpro.rentalmain.rentalmain.service;
 
 import com.xpro.rentalmain.rentalmain.component.RiskWeightCache;
+import com.xpro.rentalmain.rentalmain.dto.RiskWeightCreateRequest;
+import com.xpro.rentalmain.rentalmain.dto.RiskWeightUpdateRequest;
 import com.xpro.rentalmain.rentalmain.entity.RiskWeight;
 import com.xpro.rentalmain.rentalmain.event.WeightUpdatedEvent;
 import com.xpro.rentalmain.rentalmain.repository.RiskWeightRepository;
@@ -31,32 +33,49 @@ public class RiskWeightService {
         this.riskWeightCache = riskWeightCache;
     }
 
-    /**
-     * Updates a single weight, logs the actor, and fires a sync event.
-     */
     @Transactional
-    public RiskWeight updateWeight(String key, BigDecimal val, UUID actorId) {
-        log.info("Actor [{}] is updating weight [{}] to [{}]", actorId, key, val);
+    public RiskWeight createWeight(RiskWeightCreateRequest request) {
+        log.info("Creating new weight: {}", request.featureKey());
 
-        RiskWeight weight = repository.findByFeatureKey(key).orElseGet(RiskWeight::new);
-        weight.setFeatureKey(key);
-        weight.setWeightValue(val);
+        // Check if a weight with this key already exists to prevent duplicates
+        repository.findByFeatureKey(request.featureKey()).ifPresent(w -> {
+            throw new RuntimeException("Weight with key " + request.featureKey() + " already exists. Use Update.");
+        });
+
+        RiskWeight weight = new RiskWeight();
+        weight.setFeatureKey(request.featureKey());
+        weight.setWeightValue(request.weightValue());
         weight.setActive(true);
 
         RiskWeight saved = repository.save(weight);
-
-        // Fire the event (Contains only the ID, the listener will pull the fresh data)
         eventPublisher.publishEvent(new WeightUpdatedEvent(saved.getId()));
+        return saved;
+    }
+    @Transactional
+    public RiskWeight updateWeight(UUID weightId, RiskWeightUpdateRequest request, UUID actorId) {
+        log.info("Actor [{}] is updating weight ID: {}", actorId, weightId);
 
+        // Use the weightId from the PathVariable/Method arg for maximum security
+        RiskWeight weight = repository.findById(weightId)
+                .orElseThrow(() -> new RuntimeException("Cannot update. Weight ID not found: " + weightId));
+
+        weight.setWeightValue(request.weightValue());
+        weight.setActive(request.active());
+
+        RiskWeight saved = repository.save(weight);
+
+        // Sync to Redis
+        eventPublisher.publishEvent(new WeightUpdatedEvent(saved.getId()));
         return saved;
     }
 
     /**
-     * Bulk update method if your frontend still sends a Map of weights.
+     * Bulk update for the dashboard.
+     * Since we need IDs for bulk, we can use a Map where the Key is the UUID.
      */
     @Transactional
-    public List<RiskWeight> updateWeights(Map<String, BigDecimal> newWeights, UUID actorId) {
-        return newWeights.entrySet().stream()
+    public List<RiskWeight> updateBulkWeights(Map<UUID, RiskWeightUpdateRequest> updates, UUID actorId) {
+        return updates.entrySet().stream()
                 .map(entry -> updateWeight(entry.getKey(), entry.getValue(), actorId))
                 .collect(Collectors.toList());
     }
