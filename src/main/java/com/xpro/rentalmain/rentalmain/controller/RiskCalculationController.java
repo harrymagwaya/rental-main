@@ -1,5 +1,6 @@
 package com.xpro.rentalmain.rentalmain.controller;
 
+import com.xpro.rentalmain.rentalmain.dto.RiskScoreResponseDTO;
 import com.xpro.rentalmain.rentalmain.entity.CreditScore;
 import com.xpro.rentalmain.rentalmain.model.RiskScore;
 import com.xpro.rentalmain.rentalmain.service.RiskCalculationService;
@@ -31,7 +32,7 @@ public class RiskCalculationController {
      * This creates a new entry in the credit_scores table.
      */
     @PostMapping("/generate/{tenantId}")
-    public CreditScore generateAndSave(@PathVariable UUID tenantId) {
+    public RiskScoreResponseDTO generateAndSave(@PathVariable UUID tenantId) {
         return calculationService.generateScore(tenantId);
     }
 
@@ -39,7 +40,7 @@ public class RiskCalculationController {
      * 3. LATEST: Fetches the most recent saved score for a specific tenant.
      */
     @GetMapping("/latest/{tenantId}")
-    public CreditScore getLatestForTenant(@PathVariable UUID tenantId) {
+    public RiskScoreResponseDTO getLatestForTenant(@PathVariable UUID tenantId) {
         return calculationService.getLatestScore(tenantId);
     }
 
@@ -48,7 +49,7 @@ public class RiskCalculationController {
      * Returns a paginated ranked list.
      */
     @GetMapping("/ranked-list")
-    public Page<CreditScore> getRankedList(
+    public Page<RiskScoreResponseDTO> getRankedList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return calculationService.getRankedLeaderboardPaged(page, size);

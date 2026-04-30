@@ -3,11 +3,13 @@ package com.xpro.rentalmain.rentalmain.entity;
 import com.xpro.rentalmain.rentalmain.model.UnitStatus;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 
+@SuperBuilder
 @Data
 @Entity
 @Table(name = "property_units",

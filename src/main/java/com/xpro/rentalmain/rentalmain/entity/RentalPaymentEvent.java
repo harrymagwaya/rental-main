@@ -1,6 +1,5 @@
 package com.xpro.rentalmain.rentalmain.entity;
 
-import com.xpro.rentalmain.rentalmain.entity.RentalProfile;
 import com.xpro.rentalmain.rentalmain.model.Auditable;
 import com.xpro.rentalmain.rentalmain.model.PaymentMethod;
 import com.xpro.rentalmain.rentalmain.model.PaymentStatus;

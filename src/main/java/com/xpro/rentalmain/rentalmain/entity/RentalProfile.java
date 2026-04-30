@@ -1,11 +1,17 @@
 package com.xpro.rentalmain.rentalmain.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.experimental.SuperBuilder;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+
+@SuperBuilder
+@Data
 @Entity
 @Table(name = "rental_profiles",
         indexes = {

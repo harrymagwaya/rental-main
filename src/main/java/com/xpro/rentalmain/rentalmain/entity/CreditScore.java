@@ -2,6 +2,7 @@ package com.xpro.rentalmain.rentalmain.entity;
 
 import com.xpro.rentalmain.rentalmain.model.Auditable;
 import com.xpro.rentalmain.rentalmain.model.RiskBand;
+import com.xpro.rentalmain.rentalmain.model.RiskCategory; // <-- Added Import
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -28,12 +29,16 @@ public class CreditScore  extends Auditable {
 
     private UUID tenantId;
 
+    @Column(precision = 5, scale = 4) // Good practice to enforce math precision here too!
     private BigDecimal probabilityOfDefault;
 
     @Enumerated(EnumType.STRING)
-    private RiskBand riskBand;
+    private RiskCategory riskCategory; // <-- Added Field (From the Math Model)
 
-    private Integer score;
+    @Enumerated(EnumType.STRING)
+    private RiskBand riskBand;         // (From the Business Logic)
+
+    private Integer score;             // The 0-900 number
 
     private String modelVersion;
 

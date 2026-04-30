@@ -51,6 +51,7 @@ public class RiskWeightService {
         eventPublisher.publishEvent(new WeightUpdatedEvent(saved.getId()));
         return saved;
     }
+
     @Transactional
     public RiskWeight updateWeight(UUID weightId, RiskWeightUpdateRequest request, UUID actorId) {
         log.info("Actor [{}] is updating weight ID: {}", actorId, weightId);
@@ -59,8 +60,13 @@ public class RiskWeightService {
         RiskWeight weight = repository.findById(weightId)
                 .orElseThrow(() -> new RuntimeException("Cannot update. Weight ID not found: " + weightId));
 
-        weight.setWeightValue(request.weightValue());
-        weight.setActive(request.active());
+        if (request.weightValue() != null) {
+            weight.setWeightValue(request.weightValue());
+        }
+
+        if (request.active() != null) {
+            weight.setActive(request.active());
+        }
 
         RiskWeight saved = repository.save(weight);
 

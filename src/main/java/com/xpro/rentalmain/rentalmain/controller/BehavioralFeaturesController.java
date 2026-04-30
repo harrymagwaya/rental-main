@@ -1,6 +1,7 @@
 package com.xpro.rentalmain.rentalmain.controller;
 
 import com.xpro.rentalmain.rentalmain.dto.BehavioralFeatureDTO;
+import com.xpro.rentalmain.rentalmain.dto.BehavioralFeatureRequestDTO;
 import com.xpro.rentalmain.rentalmain.service.BehavioralFeaturesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class BehavioralFeaturesController {
 
     // Create a new data snapshot
     @PostMapping
-    public BehavioralFeatureDTO create(@RequestBody BehavioralFeatureDTO dto) {
+    public BehavioralFeatureDTO create(@RequestBody BehavioralFeatureRequestDTO dto) {
         return featuresService.createFeatureSnapshot(dto);
     }
 

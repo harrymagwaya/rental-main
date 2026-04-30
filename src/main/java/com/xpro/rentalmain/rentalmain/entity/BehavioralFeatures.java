@@ -5,9 +5,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -16,17 +13,35 @@ import java.util.UUID;
 public class BehavioralFeatures extends Auditable {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    private String featureKey;    // RENTAL_V1
+    // --- CORE RENTAL ---
+    @Column(precision = 5, scale = 4)
+    private BigDecimal rentConsistency; // % of months paid on time
 
-    @ElementCollection
-    @CollectionTable(
-            name = "tenant_feature_data",
-            joinColumns = @JoinColumn(name = "feature_snapshot_id")
-    )
-    @MapKeyColumn(name = "feature_key")
-    @Column(name = "feature_value")
-    private Map<String, BigDecimal> featureValues = new HashMap<>();
+    // --- UTILITIES & BILLS ---
+    @Column(precision = 5, scale = 4)
+    private BigDecimal utilityPayments; // Consistency in Umeme/NWSC payments
+
+    @Column(precision = 5, scale = 4)
+    private BigDecimal airtimeUsage; // Average monthly spend vs. volatility
+
+    // --- FINANCIAL DISCIPLINE ---
+    @Column(precision = 5, scale = 4)
+    private BigDecimal savingsConsistency; // Frequency of deposits into savings
+
+    @Column(precision = 5, scale = 4)
+    private BigDecimal loanRepaymentRate; // Performance on previous micro-loans
+
+    @Column(precision = 5, scale = 4)
+    private BigDecimal mobileMoneyVolume; // Total throughput (normalized)
+
+    // --- STABILITY INDICATORS ---
+    @Column(precision = 5, scale = 4)
+    private BigDecimal transactionDiversity; // Do they pay different types of bills?
+
+    @Column(precision = 5, scale = 4)
+    private BigDecimal lengthOfResidence; // Stability in their current location
+
 }

@@ -6,5 +6,5 @@ import java.util.UUID;
 // For updating an existing record
 public record RiskWeightUpdateRequest(
         BigDecimal weightValue,
-        boolean active
+        Boolean active
 ) {}

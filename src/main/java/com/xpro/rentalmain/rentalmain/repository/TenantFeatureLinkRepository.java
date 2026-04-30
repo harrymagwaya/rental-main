@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface TenantFeatureLinkRepository extends JpaRepository<TenantFeatureLink, UUID> {
 
     Optional<TenantFeatureLink> findByTenantIdAndIsActiveTrue(UUID tenantId);
+
+    boolean existsByFeatureSnapshotId(UUID tenantId);
 }

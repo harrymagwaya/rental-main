@@ -1,5 +1,6 @@
 package com.xpro.rentalmain.rentalmain.service;
 
+import com.xpro.rentalmain.rentalmain.dto.RiskScoreResponseDTO;
 import com.xpro.rentalmain.rentalmain.entity.BehavioralFeatures;
 import com.xpro.rentalmain.rentalmain.entity.CreditScore;
 import com.xpro.rentalmain.rentalmain.entity.TenantFeatureLink;
@@ -31,8 +32,6 @@ public class RiskCalculationService {
     private final CreditRiskModel riskModel; // Our Math Engine
 
 
-
-
     @Transactional(readOnly = true)
     public RiskScore calculateTenantRiskScore(UUID tenantId) {
         // Get the active link
@@ -51,37 +50,47 @@ public class RiskCalculationService {
      * The Public Method called by your Controller to generate and persist a score.
      */
     @Transactional
-    public CreditScore generateScore(UUID tenantId) {
+    public RiskScoreResponseDTO generateScore(UUID tenantId) { // Changed return type
         log.info("Generating credit score for tenant: {}", tenantId);
 
-        // 1. Get the current active link for this tenant
         TenantFeatureLink activeLink = linkRepo.findByTenantIdAndIsActiveTrue(tenantId)
                 .orElseThrow(() -> new RuntimeException("No active feature snapshot linked to tenant"));
 
-        // 2. Fetch the actual feature map data
         BehavioralFeatures features = featureRepo.findById(activeLink.getFeatureSnapshotId())
                 .orElseThrow(() -> new RuntimeException("Feature snapshot data not found"));
 
-        // 3. Delegate the math to the Model (it handles weights via RiskWeightService internally)
         RiskScore result = riskModel.predict(features);
 
-        // 4. Map the results to your persistent CreditScore entity
         CreditScore creditScore = new CreditScore();
         creditScore.setTenantId(tenantId);
-        creditScore.setProbabilityOfDefault(result.getScore()); // Using raw BigDecimal from model
-
-        // 5. Enrich with business logic (Bands and Integer scales)
+        creditScore.setProbabilityOfDefault(result.getScore());
+        creditScore.setRiskCategory(result.getCategory()); 
         creditScore.setScore(pdToIntegerScore(result.getScore()));
         creditScore.setRiskBand(determineBand(result.getScore()));
         creditScore.setModelVersion("v1-dynamic");
         creditScore.setScoredAt(LocalDateTime.now());
 
-        return scoreRepo.save(creditScore);
-    }
+        CreditScore saved = scoreRepo.save(creditScore);
 
+        // Return the clean DTO
+        return new RiskScoreResponseDTO(
+                saved.getTenantId(),
+                saved.getProbabilityOfDefault(),
+                saved.getRiskCategory(),
+                saved.getScore(),
+                saved.getRiskBand(),
+                saved.getModelVersion(),
+                saved.getScoredAt()
+        );
+    }
     @Transactional(readOnly = true)
-    public Page<CreditScore> getRankedLeaderboardPaged(int page, int size) {
-        return scoreRepo.findAllLatestRankedPaged(PageRequest.of(page, size));
+    public Page<RiskScoreResponseDTO> getRankedLeaderboardPaged(int page, int size) {
+        log.info("Fetching ranked leaderboard - Page: {}, Size: {}", page, size);
+
+        Page<CreditScore> scores = scoreRepo.findAllLatestRankedPaged(PageRequest.of(page, size));
+
+        // Use Page.map to convert each entity to a DTO
+        return scores.map(this::mapToResponseDTO);
     }
 
     /**
@@ -89,13 +98,32 @@ public class RiskCalculationService {
      * Does not trigger a new calculation.
      */
     @Transactional(readOnly = true)
-    public CreditScore getLatestScore(UUID tenantId) {
+    public RiskScoreResponseDTO getLatestScore(UUID tenantId) {
         log.info("Fetching latest stored score for tenant: {}", tenantId);
 
-        return scoreRepo.findTopByTenantIdOrderByScoredAtDesc(tenantId)
-                .orElseThrow(() -> new RuntimeException("No score history found for tenant: " + tenantId));
+        CreditScore latest = scoreRepo.findTopByTenantIdOrderByScoredAtDesc(tenantId)
+                .orElseThrow(() -> {
+                    log.error("No score history found for tenant: {}", tenantId);
+                    return new RuntimeException("No score history found for tenant: " + tenantId);
+                });
+
+        return mapToResponseDTO(latest);
     }
 
+    /**
+     * Centralized mapping logic to ensure consistency across all methods.
+     */
+    private RiskScoreResponseDTO mapToResponseDTO(CreditScore entity) {
+        return new RiskScoreResponseDTO(
+                entity.getTenantId(),
+                entity.getProbabilityOfDefault(),
+                entity.getRiskCategory(), // Now safely stored in your entity
+                entity.getScore(),
+                entity.getRiskBand(),
+                entity.getModelVersion(),
+                entity.getScoredAt()
+        );
+    }
     private Integer pdToIntegerScore(BigDecimal pd) {
         // scale: (1 - PD) * 900 -> 0 PD = 900 score, 1 PD = 0 score
         return BigDecimal.ONE.subtract(pd)
