@@ -1,3 +1,5 @@
+package com.xpro.rentalmain.rentalmain.dto;
+
 import com.xpro.rentalmain.rentalmain.model.Gender;
 
 import java.time.LocalDate;

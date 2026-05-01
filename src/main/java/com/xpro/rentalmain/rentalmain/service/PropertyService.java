@@ -1,9 +1,11 @@
 package com.xpro.rentalmain.rentalmain.service;
 
 import com.xpro.rentalmain.rentalmain.dto.*;
+import com.xpro.rentalmain.rentalmain.entity.Address;
 import com.xpro.rentalmain.rentalmain.entity.Property;
 import com.xpro.rentalmain.rentalmain.entity.PropertyUnit;
 import com.xpro.rentalmain.rentalmain.model.UnitStatus;
+import com.xpro.rentalmain.rentalmain.repository.AddressRepository;
 import com.xpro.rentalmain.rentalmain.repository.PropertyRepository;
 import com.xpro.rentalmain.rentalmain.repository.PropertyUnitRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -24,17 +26,28 @@ public class PropertyService {
     private final PropertyRepository propertyRepo;
     private final PropertyUnitRepository unitRepo;
 
-    // --- PROPERTY METHODS ---
+    private final AddressService addressService;
 
     @Transactional
     public PropertyResponse createProperty(PropertyRequest request) {
-        log.info("Creating new property: {} with {} units capacity", request.name(), request.numberOfUnits());
+        // 1. Handle Property Fields (Null-safe)
         Property property = Property.builder()
                 .name(request.name())
                 .location(request.location())
-                .numberOfUnits(request.numberOfUnits())
+                .numberOfUnits(request.numberOfUnits() != null ? request.numberOfUnits() : 0)
                 .createdAt(LocalDateTime.now())
                 .build();
+
+        if (request.address() != null) {
+            // 1. Create via service (returns DTO)
+            AddressResponse savedAddr = addressService.createAddress(request.address());
+
+            // 2. Fetch Entity via service (returns Entity)
+            Address addressEntity = addressService.getAddressEntity(savedAddr.id());
+
+            property.setAddress(addressEntity);
+        }
+
         return mapToPropertyResponse(propertyRepo.save(property));
     }
 
@@ -52,10 +65,11 @@ public class PropertyService {
         Property property = propertyRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found"));
 
-        // Null-safe checks
+        // 1. Basic Property Fields
         if (request.name() != null) property.setName(request.name());
         if (request.location() != null) property.setLocation(request.location());
 
+        // 2. Handle Capacity (int check via Integer)
         if (request.numberOfUnits() != null) {
             long existingUnits = unitRepo.countByPropertyId(id);
             if (request.numberOfUnits() < existingUnits) {
@@ -65,7 +79,37 @@ public class PropertyService {
             property.setNumberOfUnits(request.numberOfUnits());
         }
 
+        if (request.address() != null) {
+            if (property.getAddress() != null) {
+                // AddressService handles the logic internally
+                addressService.updateAddress(property.getAddress().getId(), request.address());
+            } else {
+                // Convert UpdateDTO to RequestDTO
+                var addrUpdate = request.address();
+                AddressRequest newRequest = new AddressRequest(
+                        addrUpdate.street(),
+                        addrUpdate.city(),
+                        addrUpdate.country(),
+                        addrUpdate.zipCode(),
+                        addrUpdate.postalCode()
+                );
+
+                AddressResponse newAddr = addressService.createAddress(newRequest);
+                property.setAddress(addressService.getAddressEntity(newAddr.id()));
+            }
+        }
+
         return mapToPropertyResponse(propertyRepo.save(property));
+    }
+
+    /**
+     * Helper to merge address updates without wiping out existing fields
+     */
+    private void updateAddressFields(Address existing, Address updates) {
+        if (updates.getStreet() != null) existing.setStreet(updates.getStreet());
+        if (updates.getCity() != null) existing.setCity(updates.getCity());
+        if (updates.getZipCode() != null) existing.setZipCode(updates.getZipCode());
+        // Add state/country if you have them in your Address entity
     }
 
     @Transactional
@@ -128,6 +172,8 @@ public class PropertyService {
         if (request.unitNumber() != null) unit.setUnitNumber(request.unitNumber());
         if (request.rentAmount() != null) unit.setRentAmount(request.rentAmount());
         if (request.status() != null) unit.setStatus(request.status());
+
+
 
         return mapToUnitResponse(unitRepo.save(unit));
     }
@@ -194,11 +240,25 @@ public class PropertyService {
     }
 
     private PropertyResponse mapToPropertyResponse(Property p) {
+
+        AddressResponseDTO addressDto = null;
+        if (p.getAddress() != null) {
+            Address a = p.getAddress();
+            addressDto = new AddressResponseDTO(
+                    a.getId(),
+                    a.getStreet(),
+                    a.getCity(),
+                    a.getStreet(),
+                    a.getZipCode(),
+                    a.getCountry()
+            );
+        }
         return new PropertyResponse(
                 p.getId(),
                 p.getName(),
                 p.getLocation(),
                 p.getNumberOfUnits(),
+                 addressDto,
                 p.getUnits() != null ? p.getUnits().stream().map(this::mapToUnitResponse).toList() : List.of()
         );
     }

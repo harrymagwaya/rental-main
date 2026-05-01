@@ -4,9 +4,11 @@ import com.xpro.rentalmain.rentalmain.model.Auditable;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
+@SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
@@ -16,8 +18,6 @@ public class Address extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
-
-    private UUID userId;
 
     private String street;
 

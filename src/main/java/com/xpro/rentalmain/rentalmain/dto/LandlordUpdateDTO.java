@@ -13,6 +13,6 @@ public record LandlordUpdateDTO(
         String profilePhoto,
         LocalDate dateOfBirth,
         Gender gender,
-        UUID homeAddressId,
-        UUID workAddressId
+        AddressUpdateDTO homeAddress,
+        AddressUpdateDTO workAddress
 ) {}

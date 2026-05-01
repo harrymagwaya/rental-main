@@ -1,4 +1,8 @@
-import com.xpro.rentalmain.rentalmain.entity.Tenant;
+package com.xpro.rentalmain.rentalmain.dto;
+
+import com.xpro.rentalmain.rentalmain.model.TenantStatus;
+
+import java.util.UUID;
 
 public record TenantUpdateDTO(
         String firstName,
@@ -6,5 +10,7 @@ public record TenantUpdateDTO(
         String phoneNumber,
         String email,
         String nationalId,
-        Tenant.TenantStatus status
+        UUID permanentAddressId,
+        TenantStatus status,
+        AddressUpdateDTO address
 ) {}

@@ -1,3 +1,5 @@
 package com.xpro.rentalmain.rentalmain.dto;
 
-public record PropertyRequest(String name, String location, int numberOfUnits) {}
+import com.xpro.rentalmain.rentalmain.entity.Address;
+
+public record PropertyRequest(String name, String location, Integer numberOfUnits, AddressRequest address) {}

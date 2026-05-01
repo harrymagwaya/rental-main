@@ -20,10 +20,6 @@ public class Landlord {
     @Column(name = "user_id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(unique = true)
-    private String username;      // Unique identifier for login
-
-    private String password;      // Hashed password (never store in plain text!)
 
     private String email;         // Contact/recovery info
 

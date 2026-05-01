@@ -1,5 +1,7 @@
 package com.xpro.rentalmain.rentalmain.service;
 
+import com.xpro.rentalmain.rentalmain.dto.AddressRequest;
+import com.xpro.rentalmain.rentalmain.dto.AddressResponse;
 import com.xpro.rentalmain.rentalmain.dto.LandlordResponseDTO;
 import com.xpro.rentalmain.rentalmain.dto.LandlordUpdateDTO;
 import com.xpro.rentalmain.rentalmain.entity.Address;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -23,7 +26,7 @@ public class LandlordService {
 
     private final LandlordRepository landlordRepo;
     private final UserService userService;
-    private final AddressRepository addressRepo;
+    private final AddressService addressService;
 
     /**
      * GET OR INITIALIZE: Fetch the landlord profile or create it if the User exists.
@@ -66,11 +69,45 @@ public class LandlordService {
         if (dto.dateOfBirth() != null) existing.setDateOfBirth(dto.dateOfBirth());
         if (dto.gender() != null) existing.setGender(dto.gender());
 
-        // Update Addresses
-        if (dto.homeAddressId() != null) {
-            Address home = addressRepo.findById(dto.homeAddressId())
-                    .orElseThrow(() -> new EntityNotFoundException("Home Address not found"));
-            existing.setHomeAddress(home);
+
+        // 3. Handle Home Address
+        if (dto.homeAddress() != null) {
+            if (existing.getHomeAddress() != null) {
+                addressService.updateAddress(existing.getHomeAddress().getId(), dto.homeAddress());
+            } else {
+
+                // Convert UpdateDTO to RequestDTO
+                var addrUpdate = dto.homeAddress();
+                AddressRequest newRequest = new AddressRequest(
+                        addrUpdate.street(),
+                        addrUpdate.city(),
+                        addrUpdate.country(),
+                        addrUpdate.zipCode(),
+                        addrUpdate.postalCode()
+                );
+                AddressResponse newAddr = addressService.createAddress(newRequest);
+                existing.setHomeAddress(addressService.getAddressEntity(newAddr.id()));
+            }
+        }
+
+        // 4. Handle Work Address
+        if (dto.workAddress() != null) {
+            if (existing.getWorkAddress() != null) {
+                addressService.updateAddress(existing.getWorkAddress().getId(), dto.workAddress());
+            } else {
+
+                // Convert UpdateDTO to RequestDTO
+                var addrUpdate = dto.workAddress();
+                AddressRequest newRequest = new AddressRequest(
+                        addrUpdate.street(),
+                        addrUpdate.city(),
+                        addrUpdate.country(),
+                        addrUpdate.zipCode(),
+                        addrUpdate.postalCode()
+                );
+                AddressResponse newAddr = addressService.createAddress(newRequest);
+                existing.setWorkAddress(addressService.getAddressEntity(newAddr.id()));
+            }
         }
 
         log.info("Updated Landlord profile for: {}", userId);
@@ -84,6 +121,33 @@ public class LandlordService {
         // Map any other User fields you need synced
     }
 
+    /**
+     * LIST ALL LANDLORDS
+     * Useful for the Admin dashboard to see all registered owners.
+     */
+    @Transactional(readOnly = true)
+    public List<LandlordResponseDTO> findAll() {
+        log.info("Fetching all landlord profiles");
+        return landlordRepo.findAll().stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * DELETE LANDLORD PROFILE
+     * This removes the Landlord extension but leaves the User identity intact.
+     */
+    @Transactional
+    public void deleteLandlord(UUID userId) {
+        if (!landlordRepo.existsById(userId)) {
+            throw new EntityNotFoundException("Landlord profile not found for ID: " + userId);
+        }
+
+        // Note: You might want to check if they still own properties before deleting
+        landlordRepo.deleteById(userId);
+        log.warn("Landlord profile extension removed for user: {}", userId);
+    }
+
     private LandlordResponseDTO mapToResponse(Landlord l) {
         return new LandlordResponseDTO(
                 l.getId(),
@@ -95,4 +159,6 @@ public class LandlordService {
                 l.getDateOfBirth()
         );
     }
+
+
 }
