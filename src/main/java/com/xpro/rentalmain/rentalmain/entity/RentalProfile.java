@@ -1,5 +1,6 @@
 package com.xpro.rentalmain.rentalmain.entity;
 
+import com.xpro.rentalmain.rentalmain.model.Auditable;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
@@ -18,7 +19,7 @@ import java.util.UUID;
                 @Index(name = "idx_tenant_id", columnList = "tenant_id"),
                 @Index(name = "idx_unit_id", columnList = "unit_id")
         })
-public class RentalProfile {
+public class RentalProfile extends Auditable {
 
     @Id
     @GeneratedValue

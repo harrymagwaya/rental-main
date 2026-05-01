@@ -4,10 +4,17 @@ import com.xpro.rentalmain.rentalmain.model.Auditable;
 import com.xpro.rentalmain.rentalmain.model.PaymentMethod;
 import com.xpro.rentalmain.rentalmain.model.PaymentStatus;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "rental_payment_events",
         indexes = {

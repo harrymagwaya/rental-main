@@ -1,22 +1,29 @@
 package com.xpro.rentalmain.rentalmain.entity;
 
+import com.xpro.rentalmain.rentalmain.model.Auditable;
 import com.xpro.rentalmain.rentalmain.model.UnitStatus;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 
+@EqualsAndHashCode(callSuper = true)
 @SuperBuilder
 @Data
 @Entity
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "property_units",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"property_id", "unit_number"})
         })
-public class PropertyUnit {
+public class PropertyUnit extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

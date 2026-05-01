@@ -1,5 +1,6 @@
 package com.xpro.rentalmain.rentalmain.advice;
 
+import com.xpro.rentalmain.rentalmain.dto.ApiErrorResponse;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Builder;
@@ -113,13 +114,5 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, status);
     }
 
-    @Data
-    @Builder
-    public class ApiErrorResponse {
-        private String message;     // High-level human-readable message
-        private String details;     // Specific details with populated placeholders
-        private int status;
-        private String path;
-        private LocalDateTime timestamp;
-    }
+
 }

@@ -121,4 +121,19 @@ public class UserService {
 
         log.info("User {} and associated profiles deactivated.", userId);
     }
+
+    @Transactional(readOnly = true)
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
+    }
+
+    /**
+     * EXTERNAL: Find by Email (DTO)
+     * Used by Controllers to return data to the frontend
+     */
+    @Transactional(readOnly = true)
+    public UserResponse findByEmail(String email) {
+        return mapToResponse(getByEmail(email));
+    }
 }

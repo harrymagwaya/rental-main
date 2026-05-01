@@ -1,20 +1,24 @@
 package com.xpro.rentalmain.rentalmain.entity;
 
+import com.xpro.rentalmain.rentalmain.model.Auditable;
 import com.xpro.rentalmain.rentalmain.model.Gender;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
 @AllArgsConstructor
-@Builder
-public class Landlord {
+@SuperBuilder
+public class Landlord extends Auditable {
 
     @Id
     @Column(name = "user_id", updatable = false, nullable = false)

@@ -6,8 +6,8 @@ services:
     environment:
       MYSQL_DATABASE: rentalMain
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_USER: myuser
-      MYSQL_PASSWORD: mypassword
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - rental_db_data:/var/lib/mysql
     ports:

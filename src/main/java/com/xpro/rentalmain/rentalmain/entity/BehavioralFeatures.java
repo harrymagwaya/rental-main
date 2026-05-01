@@ -2,13 +2,19 @@ package com.xpro.rentalmain.rentalmain.entity;
 
 import com.xpro.rentalmain.rentalmain.model.Auditable;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "behavioral_features")
+@NoArgsConstructor
+@AllArgsConstructor
 @Data
 public class BehavioralFeatures extends Auditable {
 

@@ -5,6 +5,8 @@ import com.xpro.rentalmain.rentalmain.model.FinancialCategory; // Enum: RENT, MO
 import com.xpro.rentalmain.rentalmain.model.PaymentStatus;    // Enum: PENDING, CONFIRMED
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,7 +17,7 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class FinancialRecord extends Auditable {
 
     @Id
