@@ -40,9 +40,4 @@ public class PropertyUnit extends Auditable {
     @Enumerated(EnumType.STRING)
     private UnitStatus status;
 
-
-    // 🔗 who is occupying it (optional direct link)
-    @OneToOne(mappedBy = "unit")
-    private RentalProfile rentalProfile;
-
 }

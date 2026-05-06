@@ -44,6 +44,7 @@ public class User extends Auditable {
     @Enumerated(EnumType.STRING)
     private UserStatus userStatus;
 
+    @Enumerated(EnumType.STRING)
     private Gender gender;
 
 }

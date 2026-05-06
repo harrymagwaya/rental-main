@@ -3,6 +3,8 @@ package com.xpro.rentalmain.rentalmain.entity;
 import com.xpro.rentalmain.rentalmain.model.Auditable;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
@@ -11,9 +13,11 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 
+@EqualsAndHashCode(callSuper = true)
 @SuperBuilder
 @Data
 @Entity
+@NoArgsConstructor
 @Table(name = "rental_profiles",
         indexes = {
                 @Index(name = "idx_tenant_id", columnList = "tenant_id"),

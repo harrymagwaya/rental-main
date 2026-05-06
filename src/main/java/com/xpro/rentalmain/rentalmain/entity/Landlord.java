@@ -2,11 +2,9 @@ package com.xpro.rentalmain.rentalmain.entity;
 
 import com.xpro.rentalmain.rentalmain.model.Auditable;
 import com.xpro.rentalmain.rentalmain.model.Gender;
+import com.xpro.rentalmain.rentalmain.model.UserStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
@@ -17,6 +15,7 @@ import java.util.UUID;
 @Data
 @Entity
 @AllArgsConstructor
+@NoArgsConstructor
 @SuperBuilder
 public class Landlord extends Auditable {
 
@@ -34,6 +33,8 @@ public class Landlord extends Auditable {
     private String lastName;
     private String middleName;
     private LocalDate dateOfBirth;
+
+    private UserStatus userStatus;
 
     @Enumerated(EnumType.STRING)
     private Gender gender;

@@ -32,6 +32,12 @@ public class Property extends Auditable {
 
     private int numberOfUnits;
 
+    // ... other fields ...
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "landlord_id")
+    private Landlord landlord;
+
     @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PropertyUnit> units = new ArrayList<>();
 

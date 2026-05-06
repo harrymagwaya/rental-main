@@ -7,6 +7,8 @@ import com.xpro.rentalmain.rentalmain.dto.LandlordUpdateDTO;
 import com.xpro.rentalmain.rentalmain.entity.Address;
 import com.xpro.rentalmain.rentalmain.entity.Landlord;
 import com.xpro.rentalmain.rentalmain.entity.User;
+import com.xpro.rentalmain.rentalmain.model.UserStatus;
+import com.xpro.rentalmain.rentalmain.model.UserType;
 import com.xpro.rentalmain.rentalmain.repository.AddressRepository;
 import com.xpro.rentalmain.rentalmain.repository.LandlordRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -28,25 +30,37 @@ public class LandlordService {
     private final UserService userService;
     private final AddressService addressService;
 
-    /**
-     * GET OR INITIALIZE: Fetch the landlord profile or create it if the User exists.
-     */
     @Transactional
-    public LandlordResponseDTO getLandlordProfile(UUID userId) {
+    public Landlord getLandlordEntity(UUID userId) {
+        log.info("Fetching or initializing Landlord entity for user: {}", userId);
+
+        // 1. Ensure the Master User exists first
         User masterUser = userService.getById(userId);
 
+        // 2. Fetch or Create the Landlord profile
         Landlord landlord = landlordRepo.findById(userId)
                 .orElseGet(() -> {
-                    log.info("Initializing Landlord profile for user: {}", userId);
+                    log.info("Creating new Landlord profile for user: {}", userId);
                     return Landlord.builder()
                             .id(userId)
+                            .createdAt(LocalDateTime.now())
+                            .userStatus(UserStatus.ACTIVE) // or your default status
                             .build();
                 });
 
-        // Sync fields from Master Identity
+        // 3. Keep profile in sync with User table (Email, Name, etc.)
         syncMasterFields(landlord, masterUser);
 
-        return mapToResponse(landlordRepo.save(landlord));
+        return landlordRepo.save(landlord);
+    }
+
+    /**
+     * EXTERNAL USE: Returns the DTO for the Controller.
+     */
+    @Transactional(readOnly = true)
+    public LandlordResponseDTO getLandlordProfile(UUID userId) {
+        Landlord landlord = getLandlordEntity(userId);
+        return mapToResponse(landlord);
     }
 
     /**
@@ -111,7 +125,7 @@ public class LandlordService {
         }
 
         log.info("Updated Landlord profile for: {}", userId);
-        return mapToResponse(landlordRepo.save(existing));
+        return mapToResponse(landlordRepo.saveAndFlush(existing));
     }
 
     private void syncMasterFields(Landlord landlord, User user) {
@@ -121,13 +135,17 @@ public class LandlordService {
         // Map any other User fields you need synced
     }
 
-    /**
-     * LIST ALL LANDLORDS
-     * Useful for the Admin dashboard to see all registered owners.
-     */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<LandlordResponseDTO> findAll() {
         log.info("Fetching all landlord profiles");
+
+        // 1. Get all Users who have the LANDLORD role
+        List<User> landlordUsers = userService.getAllByRole(UserType.LANDLORD);
+
+        // 2. Ensure each one has a profile record initialized
+        landlordUsers.forEach(user -> getLandlordEntity(user.getId()));
+
+        // 3. Now the Landlord table is populated, return the list
         return landlordRepo.findAll().stream()
                 .map(this::mapToResponse)
                 .toList();

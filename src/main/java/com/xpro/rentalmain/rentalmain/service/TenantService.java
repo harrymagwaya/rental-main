@@ -28,30 +28,34 @@ public class TenantService {
     private final UserService userService; // Assuming this exists to fetch Master Identity
     private final AddressService addressService;
 
-    /**
-     * GET BY ID (With JIT Initialization)
-     * Mirrors the HospitalAdmin logic: if the User exists but the Tenant profile
-     * doesn't, we initialize it on the fly.
-     */
     @Transactional
-    public TenantResponseDTO getTenantProfile(UUID userId) {
+    public Tenant getTenantEntity(UUID userId) {
         User masterUser = userService.getById(userId);
 
         Tenant tenant = tenantRepository.findById(userId)
                 .orElseGet(() -> {
-                    log.info("initializing Tenant profile for user: {}", userId);
-                    Tenant newTenant = new Tenant();
-                    newTenant.setId(userId);
-                    newTenant.setCreatedAt(LocalDateTime.now());
-                    newTenant.setStatus(TenantStatus.ACTIVE);
-                    return newTenant;
+                    log.info("JIT Initialization of Tenant entity for user: {}", userId);
+                    return Tenant.builder()
+                            .id(userId)
+                            .createdAt(LocalDateTime.now())
+                            .status(TenantStatus.ACTIVE)
+                            .build();
                 });
 
-        // Sync fields from Master User to ensure the profile is up to date
         syncMasterFields(tenant, masterUser);
-
-        return mapToResponse(tenantRepository.save(tenant));
+        return tenantRepository.save(tenant);
     }
+
+    /**
+     * EXTERNAL USE: Returns the DTO.
+     * This is what your Controller calls.
+     */
+    @Transactional
+    public TenantResponseDTO getTenantProfile(UUID userId) {
+        Tenant tenant = getTenantEntity(userId); // Reuse the JIT logic above
+        return mapToResponse(tenant);
+    }
+
 
     /**
      * UPDATE TENANT (Null-Safe)

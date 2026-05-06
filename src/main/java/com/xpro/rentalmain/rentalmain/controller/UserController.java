@@ -1,10 +1,12 @@
 package com.xpro.rentalmain.rentalmain.controller;
 
+import com.xpro.rentalmain.rentalmain.dto.UserRequest;
 import com.xpro.rentalmain.rentalmain.dto.UserResponse;
 import com.xpro.rentalmain.rentalmain.dto.UserUpdateDTO;
-import com.shanalert.hospitalalert.dto.UserRequest; // Ensure this package is correct or updated
+// Ensure this package is correct or updated
 import com.xpro.rentalmain.rentalmain.model.UserStatus;
 import com.xpro.rentalmain.rentalmain.service.UserService;
+import com.xpro.rentalmain.rentalmain.util.Constants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +25,7 @@ public class UserController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse register(@RequestBody UserRequest request,
-                                 @RequestParam UUID actorId) {
+                                 @RequestHeader(value = Constants.ACTOR_ID, required = false) UUID actorId) {
         return userService.registerUser(request, actorId);
     }
 

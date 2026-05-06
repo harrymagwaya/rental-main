@@ -9,4 +9,5 @@ public final class Constants {
     // Metadata Keys for Events and Auditing
     public static final String ACTOR_ID = "actor_id";
     public static final String SYSTEM_ACTOR = "SYSTEM";
+    public static final String APP_NAME = "X-APP";
 }

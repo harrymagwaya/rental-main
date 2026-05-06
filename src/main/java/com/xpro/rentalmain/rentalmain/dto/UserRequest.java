@@ -1,4 +1,4 @@
-package com.shanalert.hospitalalert.dto;
+package com.xpro.rentalmain.rentalmain.dto;
 
 
 import com.xpro.rentalmain.rentalmain.model.Gender;

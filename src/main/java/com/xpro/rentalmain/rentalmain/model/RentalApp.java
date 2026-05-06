@@ -8,8 +8,9 @@ public enum RentalApp {
     XPRO_STORAGE_SERVICE("xpro-storage-service"),
     XPRO_WEBB_APP("xpro-webb-app"),
     XPRO_ADMIN_PORTAL("xpro-admin-portal"),
-    XPRO_USER_MOBILE_APP("xpro-user-mobile-app"),
-    XPRO_USER_WEB_APP("xpro-user-web-app");
+    XPRO_RENTAL_MOBILE_APP("xpro-user-mobile-app"),
+    XPRO_LANDLORD_WEB_APP("xpro-landlord-web-app"),
+    XPRO_LOAN_WEB_APP("xpro-loan-web-app");
 
     private final String value;
 

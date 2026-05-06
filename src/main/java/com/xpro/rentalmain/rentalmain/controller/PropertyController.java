@@ -44,4 +44,11 @@ public class PropertyController {
     public List<PropertyResponse> getByLandlord(@PathVariable UUID landlordId) {
         return propertyService.getPropertiesByLandlord(landlordId);
     }
+
+    @PatchMapping("/{propertyId}/attach-landlord/{landlordId}")
+    public PropertyResponse attachLandlord(
+            @PathVariable UUID propertyId,
+            @PathVariable UUID landlordId) {
+        return propertyService.attachLandlord(propertyId, landlordId);
+    }
 }

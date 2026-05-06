@@ -1,6 +1,7 @@
 package com.xpro.rentalmain.rentalmain.service;
 
 import com.xpro.rentalmain.rentalmain.dto.EligibilityResponseDTO;
+import com.xpro.rentalmain.rentalmain.dto.PropertyUnitResponse;
 import com.xpro.rentalmain.rentalmain.dto.RiskScoreResponseDTO;
 import com.xpro.rentalmain.rentalmain.repository.TenantCapacityRepository;
 import com.xpro.rentalmain.rentalmain.repository.EligibilityRepository;
@@ -27,7 +28,7 @@ public class EligibilityService {
     private final TenantCapacityRepository capacityRepo;
     private final EligibilityRepository controlRepo;
     private final RiskCalculationService riskService;
-    private final PropertyUnitRepository unitRepo; // Injected to get Expected Rent
+    private final PropertyService propertyService;
 
     @Transactional
     public EligibilityResponseDTO processFullEligibility(UUID tenantId) {
@@ -43,8 +44,7 @@ public class EligibilityService {
                 .orElseGet(() -> createDefaultControl(tenantId));
 
         // Get the unit to find out how much rent they are supposed to pay
-        PropertyUnit unit = unitRepo.findByTenantId(tenantId)
-                .orElseThrow(() -> new RuntimeException("No property unit assigned to tenant"));
+        PropertyUnitResponse unit = propertyService.getUnitByTenant(tenantId);
 
         // 2. GATEKEEPER
         if (!control.isCalculationAllowed()) {
@@ -52,7 +52,7 @@ public class EligibilityService {
         }
 
         // 3. CALCULATE FOOTPRINT (Now using Expected Rent)
-        BigDecimal footprint = calculateFootprint(capacity, unit.getRentAmount());
+        BigDecimal footprint = calculateFootprint(capacity, unit.rentAmount());
         BigDecimal maxLimit = calculateMaxLimit(footprint, riskDto.riskBand());
 
         // 4. PERSIST

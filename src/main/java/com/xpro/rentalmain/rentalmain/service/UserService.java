@@ -1,21 +1,24 @@
 package com.xpro.rentalmain.rentalmain.service;
 
+import com.xpro.rentalmain.rentalmain.dto.UserRequest;
 import com.xpro.rentalmain.rentalmain.dto.UserUpdateDTO;
 import com.xpro.rentalmain.rentalmain.advice.ResourceAlreadyExistsException;
 import com.xpro.rentalmain.rentalmain.dto.UserResponse;
 import com.xpro.rentalmain.rentalmain.entity.User;
 import com.xpro.rentalmain.rentalmain.model.UserStatus;
+import com.xpro.rentalmain.rentalmain.model.UserType;
 import com.xpro.rentalmain.rentalmain.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 @Slf4j
 @Service
@@ -39,6 +42,7 @@ public class UserService {
                 user.getLastName(),
                 user.getPhoneNumber(),
                 user.getRole(),
+                user.getGender(),
                 user.getUserStatus()
         );
     }
@@ -69,17 +73,110 @@ public class UserService {
         return user;
     }
 
+//    @Transactional
+//    public UserResponse registerUser(UserRequest request, UUID actorId) {
+//
+//        if (actorId == null) {
+//            throw new AccessDeniedException("Actor ID is missing. User must be authenticated.");
+//        }
+//        // 1. UNIQUE CHECKS (Email & Username)
+//        if (userRepository.existsByEmail(request.getEmail())) {
+//            throw new ResourceAlreadyExistsException("Email " + request.getEmail() + " is already in use.");
+//        }
+//        if (userRepository.existsByUsername(request.getUsername())) {
+//            throw new ResourceAlreadyExistsException("Username " + request.getUsername() + " is already taken.");
+//        }
+//
+//        // 2. AUTHORIZATION LOGIC
+//        // We fetch the actor to check their permissions
+//        User actor = userRepository.findById(actorId)
+//                .orElseThrow(() -> new EntityNotFoundException("Actor not found"));
+//
+//        log.info("Actor {} is attempting to register a user with role: {}", actorId, request.getUserRole());
+//
+//        // Restriction: Only ADMIN or LANDLORD can create a TENANT
+//            if (request.getUserRole() == UserType.TENANT) {
+//            boolean isAuthorized = actor.getRole() == UserType.SYSTEM_ADMIN ||
+//                    actor.getRole() == UserType.LANDLORD;
+//
+//            if (!isAuthorized) {
+//                throw new AccessDeniedException("Insufficient permissions: Only Landlords or Admins can register tenants.");
+//            }
+//        }
+//
+//        // Restriction: Only ADMIN can create another ADMIN
+//        if (request.getUserRole() == UserType.SYSTEM_ADMIN && actor.getRole() != UserType.SYSTEM_ADMIN) {
+//            throw new AccessDeniedException("Only System Administrators can create Admin accounts.");
+//        }
+//
+//        // 3. MAP AND SAVE
+//        User user = User.builder()
+//                .username(request.getUsername())
+//                .email(request.getEmail())
+//                .password(passwordEncoder.encode(request.getPassword()))
+//                .firstName(request.getFirstName())
+//                .lastName(request.getLastName())
+//                .phoneNumber(request.getPhoneNumber())
+//                .gender(request.getGender())
+//                .role(request.getUserRole())
+//                .userStatus(UserStatus.ACTIVE)
+//                .createdBy(actorId)
+//                .build();
+//
+//        return mapToResponse(userRepository.save(user));
+//    }
+
     @Transactional
-    public UserResponse registerUser(com.shanalert.hospitalalert.dto.UserRequest request, UUID actorId) {
+    public UserResponse registerUser(UserRequest request, UUID actorId) {
+        // 1. UNIQUE CHECKS (Email & Username)
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ResourceAlreadyExistsException("Email " + request.getEmail() + " is already in use.");
         }
-
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new ResourceAlreadyExistsException("Username " + request.getUsername() + " is already taken.");
         }
-        log.info("Registering user with role: {}", request.getUserRole());
 
+        // 2. AUTHORIZATION & INITIALIZATION LOGIC
+        UserType finalRole = request.getUserRole();
+        UUID finalCreatedBy = actorId;
+
+        // Check if any users exist in the system
+        long userCount = userRepository.count();
+
+        if (userCount == 0) {
+            // BOOTSTRAP MODE: First user becomes System Admin automatically
+            log.info("No users found. Registering initial System Administrator: {}", request.getUsername());
+            finalRole = UserType.SYSTEM_ADMIN;
+            // Since there is no actor, we can set createdBy to null or a placeholder UUID
+            finalCreatedBy = null;
+        } else {
+            // STANDARD MODE: Require an actor and check permissions
+            if (actorId == null) {
+                throw new AccessDeniedException("Actor ID is missing. User must be authenticated to register others.");
+            }
+
+            User actor = userRepository.findById(actorId)
+                    .orElseThrow(() -> new EntityNotFoundException("Actor not found"));
+
+            log.info("Actor {} is attempting to register a user with role: {}", actorId, request.getUserRole());
+
+            // Restriction: Only ADMIN or LANDLORD can create a TENANT
+            if (request.getUserRole() == UserType.TENANT) {
+                boolean isAuthorized = actor.getRole() == UserType.SYSTEM_ADMIN ||
+                        actor.getRole() == UserType.LANDLORD;
+
+                if (!isAuthorized) {
+                    throw new AccessDeniedException("Insufficient permissions: Only Landlords or Admins can register tenants.");
+                }
+            }
+
+            // Restriction: Only ADMIN can create another ADMIN
+            if (request.getUserRole() == UserType.SYSTEM_ADMIN && actor.getRole() != UserType.SYSTEM_ADMIN) {
+                throw new AccessDeniedException("Only System Administrators can create Admin accounts.");
+            }
+        }
+
+        // 3. MAP AND SAVE
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
@@ -88,9 +185,9 @@ public class UserService {
                 .lastName(request.getLastName())
                 .phoneNumber(request.getPhoneNumber())
                 .gender(request.getGender())
-                .role(request.getUserRole())
+                .role(finalRole) // Use the resolved role
                 .userStatus(UserStatus.ACTIVE)
-                .createdBy(actorId)
+                .createdBy(finalCreatedBy) // Use the resolved actorId (null for the first user)
                 .build();
 
         return mapToResponse(userRepository.save(user));
@@ -126,6 +223,10 @@ public class UserService {
     public User getByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with email: " + email));
+    }
+
+    public List<User> getAllByRole(UserType role) {
+        return userRepository.findAllByRole(role);
     }
 
     /**

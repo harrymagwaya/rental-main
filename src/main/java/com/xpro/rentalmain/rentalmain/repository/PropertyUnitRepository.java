@@ -36,7 +36,4 @@ public interface PropertyUnitRepository extends JpaRepository<PropertyUnit, UUID
      */
     List<PropertyUnit> findByPropertyId(UUID propertyId);
 
-    // Finds the specific unit occupied by a tenant via the RentalProfile bridge
-    @Query("SELECT u FROM PropertyUnit u JOIN u.rentalProfile rp WHERE rp.tenantId = :tenantId")
-    Optional<PropertyUnit> findByTenantId(@Param("tenantId") UUID tenantId);
 }

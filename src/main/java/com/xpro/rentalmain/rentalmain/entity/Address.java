@@ -4,6 +4,7 @@ import com.xpro.rentalmain.rentalmain.model.Auditable;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
@@ -12,6 +13,7 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
+@NoArgsConstructor
 @Table(name = "addresses")
 public class Address extends Auditable {
 

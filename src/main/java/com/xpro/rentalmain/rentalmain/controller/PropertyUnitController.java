@@ -5,10 +5,8 @@ import com.xpro.rentalmain.rentalmain.dto.PropertyUnitResponse;
 import com.xpro.rentalmain.rentalmain.dto.PropertyUnitUpdateRequest;
 import com.xpro.rentalmain.rentalmain.service.PropertyService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -19,43 +17,47 @@ public class PropertyUnitController {
     private final PropertyService propertyService;
 
     /**
-     * POST: Add a single unit to a property
+     * CREATE: Add a unit to a specific property
      */
     @PostMapping("/property/{propertyId}")
-    @ResponseStatus(HttpStatus.CREATED)
-    public PropertyUnitResponse addUnit(@PathVariable UUID propertyId, @RequestBody PropertyUnitRequest request) {
+    public PropertyUnitResponse addUnit(
+            @PathVariable UUID propertyId,
+            @RequestBody PropertyUnitRequest request) {
         return propertyService.addSingleUnit(propertyId, request);
     }
 
+    /**
+     * READ: Get unit details by ID
+     */
     @GetMapping("/{id}")
-    public PropertyUnitResponse getUnit(@PathVariable UUID id) {
+    public PropertyUnitResponse getById(@PathVariable UUID id) {
         return propertyService.getUnitById(id);
     }
 
-    @PatchMapping("/{id}")
-    public PropertyUnitResponse updateUnit(@PathVariable UUID id, @RequestBody PropertyUnitUpdateRequest request) {
+    /**
+     * READ: Find which unit a tenant is currently living in
+     */
+    @GetMapping("/tenant/{tenantId}")
+    public PropertyUnitResponse getByTenant(@PathVariable UUID tenantId) {
+        return propertyService.getUnitByTenant(tenantId);
+    }
+
+    /**
+     * UPDATE: Update unit details (rent, unit number, or status)
+     */
+    @PutMapping("/{id}")
+    public PropertyUnitResponse update(
+            @PathVariable UUID id,
+            @RequestBody PropertyUnitUpdateRequest request) {
+        // Ensure you have an updateUnit method in PropertyService matching your Service logic
         return propertyService.updateUnit(id, request);
     }
 
+    /**
+     * DELETE: Remove a unit (Service handles check for active tenants)
+     */
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteUnit(@PathVariable UUID id) {
+    public void delete(@PathVariable UUID id) {
         propertyService.deleteUnit(id);
-    }
-
-    /**
-     * GET: List all units for a specific building
-     */
-    @GetMapping("/property/{propertyId}")
-    public List<PropertyUnitResponse> getUnitsByProperty(@PathVariable UUID propertyId) {
-        return propertyService.getUnitsByProperty(propertyId);
-    }
-
-    /**
-     * GET: Find the unit assigned to a specific tenant
-     */
-    @GetMapping("/tenant/{tenantId}")
-    public PropertyUnitResponse getUnitByTenant(@PathVariable UUID tenantId) {
-        return propertyService.getUnitByTenant(tenantId);
     }
 }
