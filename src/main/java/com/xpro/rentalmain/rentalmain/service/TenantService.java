@@ -1,13 +1,11 @@
 package com.xpro.rentalmain.rentalmain.service;
 
-import com.xpro.rentalmain.rentalmain.dto.AddressRequest;
-import com.xpro.rentalmain.rentalmain.dto.AddressResponse;
-import com.xpro.rentalmain.rentalmain.dto.TenantResponseDTO;
-import com.xpro.rentalmain.rentalmain.dto.TenantUpdateDTO;
+import com.xpro.rentalmain.rentalmain.dto.*;
 import com.xpro.rentalmain.rentalmain.entity.Address;
 import com.xpro.rentalmain.rentalmain.entity.Tenant;
 import com.xpro.rentalmain.rentalmain.entity.User;
 import com.xpro.rentalmain.rentalmain.model.TenantStatus;
+import com.xpro.rentalmain.rentalmain.model.UserType;
 import com.xpro.rentalmain.rentalmain.repository.TenantRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -103,14 +101,29 @@ public class TenantService {
         return mapToResponse(tenantRepository.save(existing));
     }
 
-    /**
-     * LIST ALL TENANTS
-     */
-    @Transactional(readOnly = true)
+    //get all tenants
+    @Transactional
     public List<TenantResponseDTO> findAll() {
+        log.info("Fetching all tenant profiles");
+
+        // 1. Get all Users who have the LANDLORD role
+        List<User> tenants = userService.getAllByRole(UserType.TENANT);
+
+        // 2. Ensure each one has a profile record initialized
+        tenants.forEach(user -> getTenantEntity(user.getId()));
+
+        // 3. Now the Landlord table is populated, return the list
         return tenantRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getAllActiveTenantIds() {
+        log.debug("Fetching all active tenant IDs for batch processing.");
+        List<UUID> ids = tenantRepository.findAllActiveTenantIds();
+        log.info("Identified {} active tenants for recalculation.", ids.size());
+        return ids;
     }
 
     /**

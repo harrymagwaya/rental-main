@@ -74,6 +74,31 @@ public class EligibilityService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public EligibilityResponseDTO getLatestEligibility(UUID tenantId) {
+        // 1. Fetch the persisted eligibility record from the DB
+        Eligibility control = controlRepo.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Eligibility not yet calculated for tenant: " + tenantId));
+
+        // 2. Get the latest score details to fill the DTO
+        RiskScoreResponseDTO riskDto = riskService.getLatestScore(tenantId);
+
+        // 3. Map the stored values to the Response DTO
+        return new EligibilityResponseDTO(
+                tenantId,
+                riskDto.creditScore(),
+                riskDto.riskBand(),
+                riskDto.riskCategory(),
+                null, // Income not stored in Eligibility entity, can fetch from capacityRepo if needed
+                null, // Footprint
+                control.getCurrentMinLimit(),
+                control.getCurrentMaxLimit(),
+                control.isCalculationAllowed(),
+                generateStatusMessage(control.getLastCalculatedBand(), control.getCurrentMaxLimit()),
+                control.getLastReviewedAt()
+        );
+    }
+
     private BigDecimal calculateFootprint(TenantCapacity capacity, BigDecimal expectedRent) {
         // Calculate raw disposable income first
         BigDecimal disposableIncome = capacity.getMonthlyIncome().subtract(expectedRent);

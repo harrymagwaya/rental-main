@@ -7,6 +7,7 @@ import com.xpro.rentalmain.rentalmain.service.PropertyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -51,6 +52,11 @@ public class PropertyUnitController {
             @RequestBody PropertyUnitUpdateRequest request) {
         // Ensure you have an updateUnit method in PropertyService matching your Service logic
         return propertyService.updateUnit(id, request);
+    }
+
+    @GetMapping("/{propertyId}/units")
+    public List<PropertyUnitResponse> getUnitsByProperty(@PathVariable UUID propertyId) {
+        return propertyService.getUnitsByProperty(propertyId);
     }
 
     /**

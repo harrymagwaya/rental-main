@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -56,6 +57,7 @@ public class RentalProfileService {
                 .leaseStartDate(dto.getLeaseStartDate())
                 .leaseEndDate(dto.getLeaseEndDate())
                 .status(RentalProfile.LeaseStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
                 .totalPayments(0)
                 .totalLatePayments(0)
                 .build();

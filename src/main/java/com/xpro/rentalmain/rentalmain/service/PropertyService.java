@@ -9,6 +9,8 @@ import com.xpro.rentalmain.rentalmain.repository.RentalProfileRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +54,10 @@ public class PropertyService {
         return propertyRepo.findById(id)
                 .map(this::mapToPropertyResponse)
                 .orElseThrow(() -> new EntityNotFoundException("Property not found with ID: " + id));
+    }
+
+    public Page<PropertyResponse> getAllProperties(Pageable pageable){
+        return propertyRepo.findAll(pageable).map(this::mapToPropertyResponse);
     }
 
     /**
@@ -138,7 +144,24 @@ public class PropertyService {
                 .status(UnitStatus.VACANT)
                 .build();
 
-        return mapToUnitResponse(unitRepo.save(unit));
+        return mapToUnitResponse(unitRepo.saveAndFlush(unit));
+    }
+
+    /**
+     * GET ALL UNITS FOR A SPECIFIC PROPERTY
+     */
+    @Transactional(readOnly = true)
+    public List<PropertyUnitResponse> getUnitsByProperty(UUID propertyId) {
+        log.info("Fetching all units for property: {}", propertyId);
+
+        // Ensure the property exists first (optional but good for error feedback)
+        if (!propertyRepo.existsById(propertyId)) {
+            throw new EntityNotFoundException("Property not found with ID: " + propertyId);
+        }
+
+        return unitRepo.findByPropertyId(propertyId).stream()
+                .map(this::mapToUnitResponse)
+                .toList();
     }
 
     // Add these to PropertyService if they went missing:

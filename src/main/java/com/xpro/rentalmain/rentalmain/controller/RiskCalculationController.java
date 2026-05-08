@@ -1,14 +1,12 @@
 package com.xpro.rentalmain.rentalmain.controller;
 
 import com.xpro.rentalmain.rentalmain.dto.RiskScoreResponseDTO;
-import com.xpro.rentalmain.rentalmain.entity.CreditScore;
 import com.xpro.rentalmain.rentalmain.model.RiskScore;
 import com.xpro.rentalmain.rentalmain.service.RiskCalculationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController

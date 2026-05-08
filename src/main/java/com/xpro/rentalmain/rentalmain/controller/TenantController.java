@@ -45,6 +45,8 @@ public class TenantController {
         return tenantService.findAll();
     }
 
+
+
     /**
      * DELETE: Remove the tenant profile extension.
      * Note: This removes the profile, but usually keeps the master User identity.

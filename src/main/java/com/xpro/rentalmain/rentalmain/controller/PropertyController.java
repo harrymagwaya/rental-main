@@ -5,6 +5,10 @@ import com.xpro.rentalmain.rentalmain.dto.PropertyResponse;
 import com.xpro.rentalmain.rentalmain.dto.PropertyUpdateRequest;
 import com.xpro.rentalmain.rentalmain.service.PropertyService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +26,12 @@ public class PropertyController {
     @ResponseStatus(HttpStatus.CREATED)
     public PropertyResponse createProperty(@RequestBody PropertyRequest request) {
         return propertyService.createProperty(request);
+    }
+
+    @GetMapping
+    public Page<PropertyResponse> getAllProperties(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return propertyService.getAllProperties(pageable);
     }
 
     @GetMapping("/{id}")

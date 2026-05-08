@@ -4,6 +4,7 @@ import com.xpro.rentalmain.rentalmain.dto.*;
 import com.xpro.rentalmain.rentalmain.entity.Address;
 import com.xpro.rentalmain.rentalmain.entity.LoanAdmin;
 import com.xpro.rentalmain.rentalmain.entity.User;
+import com.xpro.rentalmain.rentalmain.model.UserType;
 import com.xpro.rentalmain.rentalmain.repository.LoanAdminRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -25,35 +26,41 @@ public class LoanAdminService {
     private final AddressService addressService;
 
     /**
-     * GET PROFILE (JIT Initialization)
+     * GET BY ID (Now backed by JIT Initialization)
+     */
+    @Transactional
+    public LoanAdminResponseDTO getById(UUID userId) {
+        // We delegate to the profile method to ensure consistent behavior
+        return getAdminProfile(userId);
+    }
+
+    /**
+     * GET PROFILE (The "Source of Truth" for Admin data)
      */
     @Transactional
     public LoanAdminResponseDTO getAdminProfile(UUID userId) {
+        // 1. Verify master user exists first
         User masterUser = userService.getById(userId);
 
+        // 2. Find or Initialize the Admin record
         LoanAdmin admin = adminRepo.findById(userId)
                 .orElseGet(() -> {
-                    log.info("Initializing Loan Admin profile for user: {}", userId);
-                    return LoanAdmin.builder()
+                    log.info("JIT Initialization: Creating Loan Admin profile for user: {}", userId);
+                    LoanAdmin newAdmin = LoanAdmin.builder()
                             .id(userId)
                             .createdAt(LocalDateTime.now())
                             .totalApprovals(0)
                             .totalRejections(0)
                             .build();
+                    // Ensure it's persisted immediately
+                    return adminRepo.save(newAdmin);
                 });
 
+        // 3. Sync fields (Email, Phone, Name from Master User)
         syncMasterFields(admin, masterUser);
-        return mapToResponse(adminRepo.save(admin));
-    }
 
-    /**
-     * GET BY ID (Explicit fetch)
-     */
-    @Transactional(readOnly = true)
-    public LoanAdminResponseDTO getById(UUID userId) {
-        return adminRepo.findById(userId)
-                .map(this::mapToResponse)
-                .orElseThrow(() -> new EntityNotFoundException("Loan Admin not found: " + userId));
+        // 4. Save and Return
+        return mapToResponse(adminRepo.save(admin));
     }
 
     /**
@@ -101,12 +108,22 @@ public class LoanAdminService {
         return mapToResponse(adminRepo.save(existing));
     }
 
-    /**
-     * LIST ALL
-     */
-    @Transactional(readOnly = true)
+
+    //get all tenants
+    @Transactional
     public List<LoanAdminResponseDTO> findAll() {
-        return adminRepo.findAll().stream().map(this::mapToResponse).toList();
+        log.info("Fetching all tenant profiles");
+
+        // 1. Get all Users who have the LANDLORD role
+        List<User> tenants = userService.getAllByRole(UserType.TENANT);
+
+        // 2. Ensure each one has a profile record initialized
+        tenants.forEach(user -> getAdminProfile(user.getId()));
+
+        // 3. Now the Landlord table is populated, return the list
+        return adminRepo.findAll().stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     /**
