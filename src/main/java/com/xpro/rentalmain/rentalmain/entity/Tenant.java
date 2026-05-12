@@ -36,8 +36,6 @@ public class Tenant extends Auditable {
 
     private String nationalId; // optional (Uganda NIN)
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
     @Enumerated(EnumType.STRING)
     private TenantStatus status;

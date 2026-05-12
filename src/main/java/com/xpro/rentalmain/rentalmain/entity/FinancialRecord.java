@@ -31,10 +31,12 @@ public class FinancialRecord extends Auditable {
     private String txnId;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 50)
     private FinancialCategory category;
 
     private BigDecimal amount;
 
+    @Column(nullable = false)
     private LocalDateTime transactionDate;
 
     @Enumerated(EnumType.STRING)

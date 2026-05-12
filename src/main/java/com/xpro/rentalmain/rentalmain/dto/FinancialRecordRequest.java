@@ -1,5 +1,6 @@
 package com.xpro.rentalmain.rentalmain.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.xpro.rentalmain.rentalmain.model.FinancialCategory;
 
 import java.util.UUID;
@@ -12,6 +13,8 @@ public record FinancialRecordRequest(
         String txnId,
         FinancialCategory category,
         BigDecimal amount,
+
+        @JsonProperty("transactionDate")
         LocalDateTime transactionDate,
         String referenceNote
 ) {}

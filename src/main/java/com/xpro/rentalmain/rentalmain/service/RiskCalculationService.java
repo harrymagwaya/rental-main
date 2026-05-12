@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -31,7 +32,31 @@ public class RiskCalculationService {
     private final CreditScoreRepository scoreRepo;
     private final CreditRiskModel riskModel; // Our Math Engine
 
+    /**
+     * BATCH PROCESS: Iterates through all active tenants and refreshes their scores.
+     * This is designed to be called by the Scheduler or an Admin trigger.
+     */
+    @Transactional
+    public void runGlobalBatchScoring() {
+        log.info("Starting global batch scoring process...");
 
+        // Use the repository method we refined to only get relevant tenants
+        List<UUID> activeTenantIds = linkRepo.findAllActiveTenantIds();
+
+        int successCount = 0;
+        for (UUID tenantId : activeTenantIds) {
+            try {
+                // Reuse your existing logic
+                this.generateScore(tenantId);
+                successCount++;
+            } catch (Exception e) {
+                log.error("Failed to calculate batch score for tenant {}: {}", tenantId, e.getMessage());
+            }
+        }
+
+        log.info("Batch scoring completed. Successfully updated {}/{} tenants.",
+                successCount, activeTenantIds.size());
+    }
     @Transactional(readOnly = true)
     public RiskScore calculateTenantRiskScore(UUID tenantId) {
         // Get the active link

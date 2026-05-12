@@ -23,4 +23,15 @@ public interface CreditScoreRepository extends JpaRepository<CreditScore, UUID> 
             "ORDER BY cs.score DESC")
     Page<CreditScore> findAllLatestRankedPaged(Pageable pageable);
 
+    // For the Dashboard: Get the most recent score for a tenant
+    Optional<CreditScore> findFirstByTenantIdOrderByScoredAtDesc(UUID tenantId);
+
+    // For the Dashboard Table: Get latest scores for all tenants
+    @Query(value = "SELECT DISTINCT ON (tenant_id) * FROM credit_scores ORDER BY tenant_id, scored_at DESC",
+            nativeQuery = true)
+    List<CreditScore> findAllLatestScores();
+
+    // For History Charts: Get all scores for a specific tenant
+    List<CreditScore> findByTenantIdOrderByScoredAtDesc(UUID tenantId);
+
 }

@@ -3,9 +3,11 @@ package com.xpro.rentalmain.rentalmain.entity;
 import com.xpro.rentalmain.rentalmain.model.Auditable;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.UUID;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
 @Table(name = "tenant_feature_links")

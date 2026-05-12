@@ -3,6 +3,7 @@ package com.xpro.rentalmain.rentalmain.service;
 import com.xpro.rentalmain.rentalmain.dto.FinancialRecordRequest;
 import com.xpro.rentalmain.rentalmain.dto.FinancialRecordResponse;
 import com.xpro.rentalmain.rentalmain.entity.FinancialRecord;
+import com.xpro.rentalmain.rentalmain.model.FinancialCategory;
 import com.xpro.rentalmain.rentalmain.model.PaymentStatus;
 import com.xpro.rentalmain.rentalmain.repository.FinancialRecordRepository;
 import com.xpro.rentalmain.rentalmain.repository.TenantRepository;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -23,13 +25,21 @@ public class FinancialRecordService {
 
     private final FinancialRecordRepository recordRepo;
     private final TenantRepository tenantRepository;
+    private final RentalPaymentService rentalPaymentService;
 
+
+    private static final Set<FinancialCategory> MANUAL_VERIFICATION_REQUIRED =
+            Set.of(FinancialCategory.RENT, FinancialCategory.UTILITY);
     /**
      * CREATE: Attaches a new manual financial entry to a tenant.
      */
     @Transactional
     public FinancialRecordResponse attachRecordToTenant(FinancialRecordRequest request) {
         log.info("Attaching record for tenant: {}", request.tenantId());
+
+        if (request.transactionDate() == null) {
+            throw new IllegalArgumentException("Transaction date is mandatory for financial records.");
+        }
 
         if (!tenantRepository.existsById(request.tenantId())) {
             throw new EntityNotFoundException("Tenant not found with ID: " + request.tenantId());
@@ -39,17 +49,29 @@ public class FinancialRecordService {
             throw new IllegalArgumentException("Transaction ID " + request.txnId() + " already exists.");
         }
 
+        PaymentStatus initialStatus = MANUAL_VERIFICATION_REQUIRED.contains(request.category())
+                ? PaymentStatus.PENDING
+                : PaymentStatus.ON_TIME;
+
         FinancialRecord record = FinancialRecord.builder()
                 .tenantId(request.tenantId())
                 .txnId(request.txnId())
                 .category(request.category())
                 .amount(request.amount())
                 .transactionDate(request.transactionDate())
-                .status(PaymentStatus.PENDING) // New records always start as PENDING
+                .status(initialStatus)
                 .referenceNote(request.referenceNote())
                 .build();
 
-        return mapToResponse(recordRepo.save(record));
+        FinancialRecord savedRecord = recordRepo.save(record);
+
+        // If it's auto-approved, it immediately enters the behavioral ledger
+        if (initialStatus == PaymentStatus.ON_TIME) {
+            log.info("Auto-verified {} payment for tenant {}", request.category(), request.tenantId());
+            rentalPaymentService.recordBehavioralEvent(savedRecord);
+        }
+
+        return mapToResponse(savedRecord)
     }
 
     /**
@@ -134,8 +156,9 @@ public class FinancialRecordService {
                 .toList();
     }
 
+
     /**
-     * PATCH: Specifically for Admin/Landlord to move status from PENDING to ON_TIME/LATE/etc.
+     * Updated PATCH: Transitions status and triggers the behavioral event for RENT.
      */
     @Transactional
     public FinancialRecordResponse updateStatus(UUID recordId, PaymentStatus newStatus) {
@@ -144,7 +167,18 @@ public class FinancialRecordService {
 
         log.info("Transitioning record {} status to {}", recordId, newStatus);
         record.setStatus(newStatus);
-        return mapToResponse(recordRepo.save(record));
+        FinancialRecord savedRecord = recordRepo.save(record);
+
+        // TRIGGER BEHAVIORAL ENGINE:
+        // If it's a RENT payment and being moved to a "verified" status, record it in the ledger.
+        if (record.getCategory() == FinancialCategory.RENT &&
+                (newStatus == PaymentStatus.ON_TIME || newStatus == PaymentStatus.LATE)) {
+
+            log.info("Triggering Behavioral Event creation for Rent Record: {}", recordId);
+            rentalPaymentService.recordBehavioralEvent(savedRecord);
+        }
+
+        return mapToResponse(savedRecord);
     }
 
     /**

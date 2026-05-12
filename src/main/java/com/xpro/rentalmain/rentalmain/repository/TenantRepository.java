@@ -11,6 +11,7 @@ import java.util.UUID;
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, UUID> {
 
-    @Query("SELECT t.id FROM Tenant t WHERE t.isActive = true")
+    // Use JPQL to select IDs where status matches the Enum value
+    @Query("SELECT t.id FROM Tenant t WHERE t.status = com.xpro.rentalmain.rentalmain.model.TenantStatus.ACTIVE")
     List<UUID> findAllActiveTenantIds();
 }
