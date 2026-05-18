@@ -10,10 +10,12 @@ import java.util.UUID;
  * The final output returned to the user/dashboard after a credit calculation.
  */
 public record RiskScoreResponseDTO(
+        UUID id,
         UUID tenantId,
 
         // The "Raw" Math Results
-        BigDecimal probabilityOfDefault, // The 0.0 - 1.0 result from the model
+        BigDecimal successRate,          // Performance: 0.8636 (86.36%)
+        BigDecimal probabilityOfDefault,
         RiskCategory riskCategory,       // LOW_RISK, MEDIUM_RISK, HIGH_RISK
 
         // The Business Logic Results

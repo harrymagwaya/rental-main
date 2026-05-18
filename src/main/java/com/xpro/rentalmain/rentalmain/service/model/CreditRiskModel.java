@@ -70,6 +70,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
@@ -85,40 +86,76 @@ public class CreditRiskModel {
 
     private final RiskWeightService weightService; // Fetches weights from DB by Enum
 
+//    public RiskScore predict(BehavioralFeatures features) {
+//        BigDecimal weightedSum = BigDecimal.ZERO;
+//        BigDecimal totalWeightUsed = BigDecimal.ZERO;
+//
+//        // Map Enum keys to the actual values in the entity
+//        Map<FeatureKey, BigDecimal> featureValues = Map.of(
+//                FeatureKey.RENT_CONSISTENCY, features.getRentConsistency(),
+//                FeatureKey.UTILITY_PAYMENTS, features.getUtilityPayments(),
+//                FeatureKey.AIRTIME_USAGE, features.getAirtimeUsage(),
+//                FeatureKey.SAVINGS_CONSISTENCY, features.getSavingsConsistency(),
+//                FeatureKey.LOAN_REPAYMENT, features.getLoanRepaymentRate(),
+//                FeatureKey.MOMO_VOLUME, features.getMobileMoneyVolume(),
+//                FeatureKey.TX_DIVERSITY, features.getTransactionDiversity(),
+//                FeatureKey.RESIDENCE_STABILITY, features.getLengthOfResidence()
+//        );
+//
+//        for (var entry : featureValues.entrySet()) {
+//            BigDecimal val = entry.getValue();
+//            if (val != null) {
+//                // Get weight using the Enum name (SNAKE_CASE)
+//                BigDecimal weight = weightService.getActiveWeight(entry.getKey().name());
+//                weightedSum = weightedSum.add(val.multiply(weight));
+//                totalWeightUsed = totalWeightUsed.add(weight);
+//            }
+//        }
+//
+//        // NORMALIZATION: Scale back to 1.0 if some data was missing
+//        BigDecimal finalScore = (totalWeightUsed.compareTo(BigDecimal.ZERO) > 0)
+//                ? weightedSum.divide(totalWeightUsed, 4, RoundingMode.HALF_UP)
+//                : BigDecimal.ZERO;
+//
+//        return new RiskScore(finalScore, classify(finalScore));
+//    }
+
     public RiskScore predict(BehavioralFeatures features) {
         BigDecimal weightedSum = BigDecimal.ZERO;
         BigDecimal totalWeightUsed = BigDecimal.ZERO;
 
-        // Map Enum keys to the actual values in the entity
-        Map<FeatureKey, BigDecimal> featureValues = Map.of(
-                FeatureKey.RENT_CONSISTENCY, features.getRentConsistency(),
-                FeatureKey.UTILITY_PAYMENTS, features.getUtilityPayments(),
-                FeatureKey.AIRTIME_USAGE, features.getAirtimeUsage(),
-                FeatureKey.SAVINGS_CONSISTENCY, features.getSavingsConsistency(),
-                FeatureKey.LOAN_REPAYMENT, features.getLoanRepaymentRate(),
-                FeatureKey.MOMO_VOLUME, features.getMobileMoneyVolume(),
-                FeatureKey.TX_DIVERSITY, features.getTransactionDiversity(),
-                FeatureKey.RESIDENCE_STABILITY, features.getLengthOfResidence()
-        );
+        Map<FeatureKey, BigDecimal> featureValues = new HashMap<>();
+
+        // Collect non-null features
+        if (features.getRentConsistency() != null) featureValues.put(FeatureKey.RENT_CONSISTENCY, features.getRentConsistency());
+        if (features.getUtilityPayments() != null) featureValues.put(FeatureKey.UTILITY_PAYMENTS, features.getUtilityPayments());
+        if (features.getAirtimeUsage() != null) featureValues.put(FeatureKey.AIRTIME_USAGE, features.getAirtimeUsage());
+        if (features.getSavingsConsistency() != null) featureValues.put(FeatureKey.SAVINGS_CONSISTENCY, features.getSavingsConsistency());
+        if (features.getLoanRepaymentRate() != null) featureValues.put(FeatureKey.LOAN_REPAYMENT, features.getLoanRepaymentRate());
+        if (features.getMobileMoneyVolume() != null) featureValues.put(FeatureKey.MOMO_VOLUME, features.getMobileMoneyVolume());
+        if (features.getTransactionDiversity() != null) featureValues.put(FeatureKey.TX_DIVERSITY, features.getTransactionDiversity());
+        if (features.getLengthOfResidence() != null) featureValues.put(FeatureKey.RESIDENCE_STABILITY, features.getLengthOfResidence());
 
         for (var entry : featureValues.entrySet()) {
-            BigDecimal val = entry.getValue();
-            if (val != null) {
-                // Get weight using the Enum name (SNAKE_CASE)
-                BigDecimal weight = weightService.getActiveWeight(entry.getKey().name());
-                weightedSum = weightedSum.add(val.multiply(weight));
-                totalWeightUsed = totalWeightUsed.add(weight);
-            }
+            BigDecimal weight = weightService.getActiveWeight(entry.getKey().name());
+            weightedSum = weightedSum.add(entry.getValue().multiply(weight));
+            totalWeightUsed = totalWeightUsed.add(weight);
         }
 
-        // NORMALIZATION: Scale back to 1.0 if some data was missing
-        BigDecimal finalScore = (totalWeightUsed.compareTo(BigDecimal.ZERO) > 0)
+        // 1. Calculate Success Rate (Performance)
+        BigDecimal successRate = (totalWeightUsed.compareTo(BigDecimal.ZERO) > 0)
                 ? weightedSum.divide(totalWeightUsed, 4, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
-        return new RiskScore(finalScore, classify(finalScore));
-    }
+        // 2. Calculate Probability of Default (PD)
+        // PD = 1.0 - Success Rate
+        BigDecimal probabilityOfDefault = BigDecimal.ONE.subtract(successRate);
 
+        log.info("Calculation complete - Success Rate: {}, PD: {}", successRate, probabilityOfDefault);
+
+        // Update your RiskScore constructor to accept both
+        return new RiskScore(successRate, probabilityOfDefault, classify(successRate));
+    }
     /**
      * CLASSIFIER: High Performance (0.8+) = LOW RISK
      */

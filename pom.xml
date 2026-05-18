@@ -132,7 +132,10 @@
 							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
-				</configuration>
+                    <source>23</source>
+                    <target>23</target>
+                    <compilerArgs>--enable-preview</compilerArgs>
+                </configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

@@ -27,18 +27,21 @@ public class FinancialRecord extends Auditable {
     @Column(nullable = false)
     private UUID tenantId;
 
-    @Column(unique = true) // Prevents duplicate MoMo/Bank refs
+
+    @Column(unique = true, nullable = false) // Prevents duplicate MoMo/Bank refs
     private String txnId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", length = 50)
     private FinancialCategory category;
 
+    @Column(nullable = false)
     private BigDecimal amount;
 
     @Column(nullable = false)
     private LocalDateTime transactionDate;
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 

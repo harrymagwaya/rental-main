@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -51,6 +52,12 @@ public class RiskCalculationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return calculationService.getRankedLeaderboardPaged(page, size);
+    }
+
+    @GetMapping
+    public List<RiskScoreResponseDTO> getAllScores() {
+        // No @Transactional here; let the service handle it
+        return calculationService.getAllSavedScores();
     }
 
 }

@@ -32,6 +32,18 @@ public class RiskCalculationService {
     private final CreditScoreRepository scoreRepo;
     private final CreditRiskModel riskModel; // Our Math Engine
 
+    @Transactional(readOnly = true)
+    public List<RiskScoreResponseDTO> getAllSavedScores() {
+        log.info("Fetching all saved credit scores from database");
+
+        // Assuming you want the most recent score for every user
+        List<CreditScore> allScores = scoreRepo.findAll();
+
+        return allScores.stream()
+                .map(this::mapToResponseDTO)
+                .toList();
+    }
+
     /**
      * BATCH PROCESS: Iterates through all active tenants and refreshes their scores.
      * This is designed to be called by the Scheduler or an Admin trigger.
@@ -70,12 +82,8 @@ public class RiskCalculationService {
         // Generate score via Math Engine (Cache + Entity Map)
         return riskModel.predict(features);
     }
-
-    /**
-     * The Public Method called by your Controller to generate and persist a score.
-     */
     @Transactional
-    public RiskScoreResponseDTO generateScore(UUID tenantId) { // Changed return type
+    public RiskScoreResponseDTO generateScore(UUID tenantId) {
         log.info("Generating credit score for tenant: {}", tenantId);
 
         TenantFeatureLink activeLink = linkRepo.findByTenantIdAndIsActiveTrue(tenantId)
@@ -84,29 +92,26 @@ public class RiskCalculationService {
         BehavioralFeatures features = featureRepo.findById(activeLink.getFeatureSnapshotId())
                 .orElseThrow(() -> new RuntimeException("Feature snapshot data not found"));
 
+        // 1. Get dual-metric result from the Math Engine
         RiskScore result = riskModel.predict(features);
 
+        // 2. Prepare the Entity with both Success Rate and PD
         CreditScore creditScore = new CreditScore();
         creditScore.setTenantId(tenantId);
-        creditScore.setProbabilityOfDefault(result.getScore());
-        creditScore.setRiskCategory(result.getCategory()); 
-        creditScore.setScore(pdToIntegerScore(result.getScore()));
-        creditScore.setRiskBand(determineBand(result.getScore()));
+        creditScore.setSuccessRate(result.getSuccessRate());         // Added
+        creditScore.setProbabilityOfDefault(result.getProbabilityOfDefault()); // Corrected
+        creditScore.setRiskCategory(result.getCategory());
+
+        // Use Success Rate for the integer score calculation (Higher is better)
+        creditScore.setScore(calculateIntegerScore(result.getSuccessRate()));
+        creditScore.setRiskBand(determineBand(result.getSuccessRate()));
+
         creditScore.setModelVersion("v1-dynamic");
         creditScore.setScoredAt(LocalDateTime.now());
 
         CreditScore saved = scoreRepo.save(creditScore);
 
-        // Return the clean DTO
-        return new RiskScoreResponseDTO(
-                saved.getTenantId(),
-                saved.getProbabilityOfDefault(),
-                saved.getRiskCategory(),
-                saved.getScore(),
-                saved.getRiskBand(),
-                saved.getModelVersion(),
-                saved.getScoredAt()
-        );
+        return mapToResponseDTO(saved);
     }
     @Transactional(readOnly = true)
     public Page<RiskScoreResponseDTO> getRankedLeaderboardPaged(int page, int size) {
@@ -135,14 +140,13 @@ public class RiskCalculationService {
         return mapToResponseDTO(latest);
     }
 
-    /**
-     * Centralized mapping logic to ensure consistency across all methods.
-     */
     private RiskScoreResponseDTO mapToResponseDTO(CreditScore entity) {
         return new RiskScoreResponseDTO(
+                entity.getId(),
                 entity.getTenantId(),
-                entity.getProbabilityOfDefault(),
-                entity.getRiskCategory(), // Now safely stored in your entity
+                entity.getSuccessRate(),          // Performance
+                entity.getProbabilityOfDefault(), // Risk
+                entity.getRiskCategory(),
                 entity.getScore(),
                 entity.getRiskBand(),
                 entity.getModelVersion(),
@@ -154,6 +158,11 @@ public class RiskCalculationService {
         return BigDecimal.ONE.subtract(pd)
                 .multiply(new BigDecimal("900"))
                 .intValue();
+    }
+
+    private Integer calculateIntegerScore(BigDecimal successRate) {
+        // SuccessRate * 900 -> 1.0 = 900, 0.0 = 0
+        return successRate.multiply(new BigDecimal("900")).intValue();
     }
 
     private RiskBand determineBand(BigDecimal pd) {

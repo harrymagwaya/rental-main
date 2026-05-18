@@ -71,7 +71,7 @@ public class FinancialRecordService {
             rentalPaymentService.recordBehavioralEvent(savedRecord);
         }
 
-        return mapToResponse(savedRecord)
+        return mapToResponse(savedRecord);
     }
 
     /**

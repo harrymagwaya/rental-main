@@ -20,7 +20,7 @@ public class CreditScoringScheduler {
     /**
      * Runs every 20 minutes: 0, 20, 40 past the hour.
      */
-    @Scheduled(cron = "0 0/20 * * * *")
+    @Scheduled(cron = "0 0/5 * * * *")
     public void runFrequentScoreRefresh() {
         log.info("Cron Triggered: Starting 20-minute financial profile refresh.");
 
@@ -30,11 +30,15 @@ public class CreditScoringScheduler {
                 // 2. Execute the Master Pipeline
                 orchestrator.refreshTenantFinancialProfile(tenantId);
             } catch (Exception e) {
-                log.error("Batch Failure: Could not refresh profile for tenant [{}]. Reason: {}",
-                        tenantId, e.getMessage());
+                log.error(
+                        "Failed to calculate batch score for tenant {}. Reason: {}",
+                        tenantId,
+                        e.getMessage(),
+                        e
+                );
             }
         });
 
-        log.info("Cron Completed: 20-minute refresh cycle finished.");
+        log.info("Cron Completed: 5-minute refresh cycle finished.");
     }
 }

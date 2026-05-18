@@ -83,14 +83,16 @@ public class EligibilityService {
         // 2. Get the latest score details to fill the DTO
         RiskScoreResponseDTO riskDto = riskService.getLatestScore(tenantId);
 
-        // 3. Map the stored values to the Response DTO
+        TenantCapacity capacity = capacityRepo.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Financial capacity data missing"));
+
         return new EligibilityResponseDTO(
                 tenantId,
                 riskDto.creditScore(),
                 riskDto.riskBand(),
                 riskDto.riskCategory(),
-                null, // Income not stored in Eligibility entity, can fetch from capacityRepo if needed
-                null, // Footprint
+                capacity.getMonthlyIncome(), // FIXED: No longer null
+                control.getCurrentMaxLimit().multiply(new BigDecimal("2")), // Approximate Footprint if not stored
                 control.getCurrentMinLimit(),
                 control.getCurrentMaxLimit(),
                 control.isCalculationAllowed(),
@@ -121,10 +123,11 @@ public class EligibilityService {
 
     private BigDecimal calculateMaxLimit(BigDecimal footprint, RiskBand band) {
         BigDecimal multiplier = switch (band) {
-            case PLATINUM -> new BigDecimal("0.50"); // 50% of footprint
-            case GOLD -> new BigDecimal("0.35");     // 35% of footprint
-            case SILVER -> new BigDecimal("0.20");   // 20% of footprint
-            case BRONZE, REJECT -> BigDecimal.ZERO;  // No limit for high risk
+            case PLATINUM -> new BigDecimal("0.50");
+            case GOLD -> new BigDecimal("0.35");
+            case SILVER -> new BigDecimal("0.25"); // Increased from 0.20
+            case BRONZE -> new BigDecimal("0.10"); // Allow a 10% limit for Bronze instead of ZERO
+            case REJECT -> BigDecimal.ZERO;
         };
 
         return footprint.multiply(multiplier).setScale(0, RoundingMode.HALF_UP);

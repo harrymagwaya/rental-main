@@ -29,6 +29,9 @@ public class CreditScore  extends Auditable {
 
     private UUID tenantId;
 
+    @Column(precision = 5, scale = 4)
+    private BigDecimal successRate;
+
     @Column(precision = 5, scale = 4) // Good practice to enforce math precision here too!
     private BigDecimal probabilityOfDefault;
 
