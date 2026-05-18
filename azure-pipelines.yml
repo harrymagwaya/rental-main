@@ -1,0 +1,24 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  # 1. Build the JAR (Optional if you do it inside the Docker build)
+  - task: Maven@4
+    inputs:
+      mavenPomFile: 'pom.xml'
+      goals: 'clean package'
+      options: '-DskipTests'
+
+  # 2. Copy the code to the VM and Run Docker
+  - task: SSH@0
+    inputs:
+      sshEndpoint: 'RentalVMConnection' # The name of the connection you created
+      runOptions: 'commands'
+      commands: |
+        cd /home/azureuser/rental-main
+        git pull origin main
+        docker-compose up -d --build
+      readyTimeout: '20000'
