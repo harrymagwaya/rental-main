@@ -55,7 +55,7 @@ public class RiskWeightController {
      * BULK UPDATE: POST /api/v1/admin/weights/bulk?actorId={actorId}
      * Body: { "uuid-1": {"weightValue": 0.5, "active": true}, "uuid-2": {...} }
      */
-    @PostMapping("/bulk")
+    @PostMapping("create/bulk")
     public List<RiskWeight> bulkUpdate(
             @RequestBody Map<UUID, RiskWeightUpdateRequest> updates,
             @RequestHeader(Constants.ACTOR_ID) UUID actorId) {
@@ -76,7 +76,10 @@ public class RiskWeightController {
         weightService.deleteWeight(id);
     }
 
-
+    @PostMapping("/bulk")
+    public List<RiskWeight> createBulkWeights(@RequestBody List<RiskWeightCreateRequest> requests) {
+        return weightService.createWeights(requests);
+    }
     /**
      * Manually triggers a full cache wipe and reload.
      * Useful for troubleshooting or manual overrides.

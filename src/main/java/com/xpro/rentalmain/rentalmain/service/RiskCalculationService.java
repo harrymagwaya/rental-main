@@ -104,7 +104,7 @@ public class RiskCalculationService {
 
         // Use Success Rate for the integer score calculation (Higher is better)
         creditScore.setScore(calculateIntegerScore(result.getSuccessRate()));
-        creditScore.setRiskBand(determineBand(result.getSuccessRate()));
+        creditScore.setRiskBand(determineBand(result.getProbabilityOfDefault()));
 
         creditScore.setModelVersion("v1-dynamic");
         creditScore.setScoredAt(LocalDateTime.now());

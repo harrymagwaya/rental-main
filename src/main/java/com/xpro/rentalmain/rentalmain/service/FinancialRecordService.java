@@ -65,8 +65,8 @@ public class FinancialRecordService {
 
         FinancialRecord savedRecord = recordRepo.save(record);
 
-        // If it's auto-approved, it immediately enters the behavioral ledger
-        if (initialStatus == PaymentStatus.ON_TIME) {
+        if (initialStatus == PaymentStatus.ON_TIME &&
+                (request.category() == FinancialCategory.RENT || request.category() == FinancialCategory.UTILITY)) {
             log.info("Auto-verified {} payment for tenant {}", request.category(), request.tenantId());
             rentalPaymentService.recordBehavioralEvent(savedRecord);
         }

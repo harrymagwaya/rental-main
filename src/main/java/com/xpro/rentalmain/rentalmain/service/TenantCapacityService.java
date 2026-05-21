@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +38,26 @@ public class TenantCapacityService {
                 .avgAirtimeSpend(dto.avgAirtimeSpend())
                 .isVerified(dto.isVerified() != null && dto.isVerified())
                 .build());
+    }
+
+    @Transactional
+    public void initializeShell(UUID tenantId) {
+        if (capacityRepo.findByTenantId(tenantId).isEmpty()) {
+            log.info("Initializing financial shell for tenant: {}", tenantId);
+
+            TenantCapacity shell = TenantCapacity.builder()
+                    .tenantId(tenantId)
+                    // Initialize with zero/null safe values
+                    .monthlyIncome(BigDecimal.ZERO)
+                    .avgMomoVolume(BigDecimal.ZERO)
+                    .avgUtilitySpend(BigDecimal.ZERO)
+                    .avgSavingsDeposit(BigDecimal.ZERO)
+                    .avgAirtimeSpend(BigDecimal.ZERO)
+                    .isVerified(false)
+                    .build();
+
+            capacityRepo.save(shell);
+        }
     }
 
     private TenantCapacity updateExisting(TenantCapacity existing, TenantCapacityRequestDTO dto) {

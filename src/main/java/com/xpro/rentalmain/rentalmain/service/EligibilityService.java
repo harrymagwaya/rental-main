@@ -86,13 +86,17 @@ public class EligibilityService {
         TenantCapacity capacity = capacityRepo.findByTenantId(tenantId)
                 .orElseThrow(() -> new RuntimeException("Financial capacity data missing"));
 
+        BigDecimal approximateFootprint = (control.getCurrentMaxLimit() != null)
+                ? control.getCurrentMaxLimit().multiply(new BigDecimal("2"))
+                : BigDecimal.ZERO;
+
         return new EligibilityResponseDTO(
                 tenantId,
                 riskDto.creditScore(),
                 riskDto.riskBand(),
                 riskDto.riskCategory(),
                 capacity.getMonthlyIncome(), // FIXED: No longer null
-                control.getCurrentMaxLimit().multiply(new BigDecimal("2")), // Approximate Footprint if not stored
+                 approximateFootprint,
                 control.getCurrentMinLimit(),
                 control.getCurrentMaxLimit(),
                 control.isCalculationAllowed(),

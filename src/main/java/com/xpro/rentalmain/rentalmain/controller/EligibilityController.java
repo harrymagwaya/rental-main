@@ -19,8 +19,8 @@ public class EligibilityController {
         return eligibilityService.getLatestEligibility(tenantId);
     }
 
-//    @PostMapping("/{tenantId}/refresh")
-//    public EligibilityResponseDTO refreshEligibility(@PathVariable UUID tenantId) {
-//        return eligibilityService.processFullEligibility(tenantId);
-//    }
+    @PostMapping("/{tenantId}/refresh")
+    public EligibilityResponseDTO refreshEligibility(@PathVariable UUID tenantId) {
+        return eligibilityService.processFullEligibility(tenantId);
+    }
 }
