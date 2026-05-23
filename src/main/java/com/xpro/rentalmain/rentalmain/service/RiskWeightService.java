@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,6 +51,35 @@ public class RiskWeightService {
         RiskWeight saved = repository.save(weight);
         eventPublisher.publishEvent(new WeightUpdatedEvent(saved.getId()));
         return saved;
+    }
+
+    @Transactional
+    public List<RiskWeight> createWeights(List<RiskWeightCreateRequest> requests) {
+        log.info("Creating {} new weights in bulk", requests.size());
+
+        List<RiskWeight> weightsToSave = new ArrayList<>();
+
+        for (RiskWeightCreateRequest request : requests) {
+            // Validate uniqueness within the list or database
+            if (repository.existsByFeatureKey(request.featureKey())) {
+                throw new RuntimeException("Weight with key " + request.featureKey() + " already exists.");
+            }
+
+            RiskWeight weight = new RiskWeight();
+            weight.setFeatureKey(request.featureKey());
+            weight.setWeightValue(request.weightValue());
+            weight.setActive(true);
+            weightsToSave.add(weight);
+        }
+
+        List<RiskWeight> savedWeights = repository.saveAll(weightsToSave);
+
+        // Optional: Publish events for each
+        savedWeights.forEach(w ->
+                eventPublisher.publishEvent(new WeightUpdatedEvent(w.getId()))
+        );
+
+        return savedWeights;
     }
 
     @Transactional

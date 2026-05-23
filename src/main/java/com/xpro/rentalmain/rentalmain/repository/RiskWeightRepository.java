@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface RiskWeightRepository extends JpaRepository<RiskWeight, UUID> {
     List<RiskWeight> findAllByIsActiveTrue();
     Optional<RiskWeight> findByFeatureKey(String featureKey);
+    boolean existsByFeatureKey(String featureKey);
 }

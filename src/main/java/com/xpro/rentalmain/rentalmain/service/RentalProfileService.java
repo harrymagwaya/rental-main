@@ -34,6 +34,8 @@ public class RentalProfileService {
     @Lazy // Prevents circular dependency with PropertyService
     private final PropertyService propertyService;
 
+    private final TenantCapacityService tenantCapacityService;
+
     // --- CRUD: CREATE ---
     @Transactional
     public RentalProfileResponseDTO createProfile(RentalProfileCreateDTO dto) {
@@ -62,10 +64,16 @@ public class RentalProfileService {
                 .totalLatePayments(0)
                 .build();
 
-        // 3. Use PropertyService to update status (encapsulates logic)
+        RentalProfile savedProfile = repository.save(profile);
+
+        // 2. TRIGGER: Initialize Financial Shadow (The Proactive Step)
+        // This ensures the Scheduler never encounters a null capacity record
+        tenantCapacityService.initializeShell(tenant.getId());
+
+        // 3. Finalize unit status
         propertyService.updateUnitStatus(unit.getId(), UnitStatus.OCCUPIED);
 
-        return mapToResponseDTO(repository.save(profile));
+        return mapToResponseDTO(savedProfile);
     }
 
     // --- CRUD: READ (By ID) ---

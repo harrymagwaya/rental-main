@@ -31,7 +31,8 @@ public class RentalPaymentService {
                 .orElseThrow(() -> new RuntimeException("No active lease found for tenant"));
 
         // Logic: Standardized due date on the 5th
-        LocalDateTime dueDate = payment.getTransactionDate().withDayOfMonth(5);
+        LocalDateTime dueDate = payment.getTransactionDate()
+                .withDayOfMonth(profile.getRentDueDay());
 
         long daysLate = java.time.Duration.between(dueDate, payment.getTransactionDate()).toDays();
         if (daysLate < 0) daysLate = 0;
