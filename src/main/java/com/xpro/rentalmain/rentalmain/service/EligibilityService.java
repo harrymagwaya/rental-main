@@ -12,6 +12,8 @@ import com.xpro.rentalmain.rentalmain.entity.TenantCapacity;
 import com.xpro.rentalmain.rentalmain.model.RiskBand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,16 +45,24 @@ public class EligibilityService {
         Eligibility control = controlRepo.findByTenantId(tenantId)
                 .orElseGet(() -> createDefaultControl(tenantId));
 
-        // Get the unit to find out how much rent they are supposed to pay
-        PropertyUnitResponse unit = propertyService.getUnitByTenant(tenantId);
+        // DEFENSIVE FIX: Handle thin-file or unassigned rental units gracefully
+        BigDecimal expectedRent = BigDecimal.ZERO;
+        try {
+            PropertyUnitResponse unit = propertyService.getUnitByTenant(tenantId);
+            if (unit != null && unit.rentAmount() != null) {
+                expectedRent = unit.rentAmount();
+            }
+        } catch (Exception e) {
+            log.warn("No active property unit found for tenant: {}. Defaulting rent footprint to 0.", tenantId);
+        }
 
         // 2. GATEKEEPER
         if (!control.isCalculationAllowed()) {
             return mapToDeniedResponse(riskDto, "Calculation blocked by Administrator.");
         }
 
-        // 3. CALCULATE FOOTPRINT (Now using Expected Rent)
-        BigDecimal footprint = calculateFootprint(capacity, unit.rentAmount());
+        // 3. CALCULATE FOOTPRINT (Safe from null pointers)
+        BigDecimal footprint = calculateFootprint(capacity, expectedRent);
         BigDecimal maxLimit = calculateMaxLimit(footprint, riskDto.riskBand());
 
         // 4. PERSIST
@@ -75,32 +85,95 @@ public class EligibilityService {
     }
 
     @Transactional(readOnly = true)
-    public EligibilityResponseDTO getLatestEligibility(UUID tenantId) {
-        // 1. Fetch the persisted eligibility record from the DB
-        Eligibility control = controlRepo.findByTenantId(tenantId)
-                .orElseThrow(() -> new RuntimeException("Eligibility not yet calculated for tenant: " + tenantId));
+    public Eligibility getEntityById(UUID eligibilityId) {
+        log.info("Fetching eligibility entity directly by ID: {}", eligibilityId);
+        return controlRepo.findById(eligibilityId)
+                .orElseThrow(() -> new RuntimeException("Eligibility record not found for ID: " + eligibilityId));
+    }
 
-        // 2. Get the latest score details to fill the DTO
+    @Transactional(readOnly = true)
+    public EligibilityResponseDTO getEligibilityByIdAsDto(UUID eligibilityId) {
+        // 1. Fetch the control entity by its direct ID
+        Eligibility control = getEntityById(eligibilityId);
+        UUID tenantId = control.getTenantId();
+
+        // 2. Hydrate the remaining financial fields using the linked tenant ID
         RiskScoreResponseDTO riskDto = riskService.getLatestScore(tenantId);
-
         TenantCapacity capacity = capacityRepo.findByTenantId(tenantId)
-                .orElseThrow(() -> new RuntimeException("Financial capacity data missing"));
+                .orElseThrow(() -> new RuntimeException("Financial capacity data missing for tenant: " + tenantId));
 
         BigDecimal approximateFootprint = (control.getCurrentMaxLimit() != null)
                 ? control.getCurrentMaxLimit().multiply(new BigDecimal("2"))
                 : BigDecimal.ZERO;
+
+        // 3. Return a clean, production-ready response payload
+        return new EligibilityResponseDTO(
+                tenantId,
+                riskDto.creditScore(),
+                riskDto.riskBand(),
+                riskDto.riskCategory(),
+                capacity.getMonthlyIncome(),
+                approximateFootprint,
+                control.getCurrentMinLimit(),
+                control.getCurrentMaxLimit(),
+                control.isCalculationAllowed(),
+                generateStatusMessage(control.getLastCalculatedBand(), control.getCurrentMaxLimit()),
+                control.getLastReviewedAt()
+        );
+    }
+
+    @Transactional
+    public void deleteEligibilityRecord(UUID tenantId) {
+        log.warn("Purging eligibility record for tenant: {}", tenantId);
+        Eligibility control = controlRepo.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Record not found for tenant: " + tenantId));
+        controlRepo.delete(control);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Eligibility> getAllEligibilityPaged(Pageable pageable) {
+        log.info("Fetching paged eligibility records.");
+        return controlRepo.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public EligibilityResponseDTO getLatestEligibility(UUID tenantId) {
+        // 1. Fetch the persisted eligibility control parameters
+        Eligibility control = controlRepo.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Eligibility records have not been initialized for tenant: " + tenantId));
+
+        // 2. Get the latest score details directly from the evaluation service
+        RiskScoreResponseDTO riskDto = riskService.getLatestScore(tenantId);
+
+        // 3. Fetch financial footprint parameters
+        TenantCapacity capacity = capacityRepo.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Financial capacity data missing"));
+
+        // 4. Handle expected rent calculations safely for unassigned units
+        BigDecimal expectedRent = BigDecimal.ZERO;
+        try {
+            PropertyUnitResponse unit = propertyService.getUnitByTenant(tenantId);
+            if (unit != null && unit.rentAmount() != null) {
+                expectedRent = unit.rentAmount();
+            }
+        } catch (Exception e) {
+            log.warn("No active property unit found when reading footprint for tenant: {}. Defaulting rent to 0.", tenantId);
+        }
+
+        // FIXED: Use your actual internal service helper method instead of the placeholder
+        BigDecimal realFootprint = calculateFootprint(capacity, expectedRent);
 
         return new EligibilityResponseDTO(
                 tenantId,
                 riskDto.creditScore(),
                 riskDto.riskBand(),
                 riskDto.riskCategory(),
-                capacity.getMonthlyIncome(), // FIXED: No longer null
-                 approximateFootprint,
+                capacity.getMonthlyIncome(),
+                realFootprint, // Clean, mathematically sound live data
                 control.getCurrentMinLimit(),
                 control.getCurrentMaxLimit(),
                 control.isCalculationAllowed(),
-                generateStatusMessage(control.getLastCalculatedBand(), control.getCurrentMaxLimit()),
+                generateStatusMessage(riskDto.riskBand(), control.getCurrentMaxLimit()),
                 control.getLastReviewedAt()
         );
     }
@@ -131,7 +204,7 @@ public class EligibilityService {
             case GOLD -> new BigDecimal("0.35");
             case SILVER -> new BigDecimal("0.25"); // Increased from 0.20
             case BRONZE -> new BigDecimal("0.10"); // Allow a 10% limit for Bronze instead of ZERO
-            case REJECT -> BigDecimal.ZERO;
+            case REJECT,UNRATED -> BigDecimal.ZERO;
         };
 
         return footprint.multiply(multiplier).setScale(0, RoundingMode.HALF_UP);
@@ -157,8 +230,9 @@ public class EligibilityService {
         // Your custom advice mapped to the RiskBand
         return switch (band) {
             case PLATINUM -> "Excellent consistency! You have reached your maximum borrowing power.";
-            case GOLD -> "Good history. Ensure all utilities are reported to reach Platinum.";
-            case SILVER -> "Keep reporting on-time rent payments to increase your limit.";
+            case GOLD     -> "Good history. Ensure all utilities are reported to reach Platinum.";
+            case SILVER   -> "Keep reporting on-time rent payments to increase your limit.";
+            case UNRATED  -> "Your profile is newly registered. Link your Mobile Money, rent ledger, or utility accounts to begin calculating your credit score.";
             case BRONZE, REJECT -> "Focus on on-time payments to start building your credit profile.";
         };
     }

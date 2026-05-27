@@ -5,5 +5,6 @@ public enum RiskBand {
     GOLD,     // Low Risk
     SILVER,   // Medium Risk
     BRONZE,   // High Risk
-    REJECT    // Critical Risk
+    REJECT,    // Critical Risk
+    UNRATED
 }

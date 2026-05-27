@@ -1,16 +1,21 @@
 package com.xpro.rentalmain.rentalmain.service;
 
+import com.xpro.rentalmain.rentalmain.dto.TenantCapacityRequestDTO;
 import com.xpro.rentalmain.rentalmain.dto.UserRequest;
 import com.xpro.rentalmain.rentalmain.dto.UserUpdateDTO;
 import com.xpro.rentalmain.rentalmain.advice.ResourceAlreadyExistsException;
 import com.xpro.rentalmain.rentalmain.dto.UserResponse;
+import com.xpro.rentalmain.rentalmain.entity.Eligibility;
+import com.xpro.rentalmain.rentalmain.entity.TenantCapacity;
 import com.xpro.rentalmain.rentalmain.entity.User;
+import com.xpro.rentalmain.rentalmain.model.RiskBand;
 import com.xpro.rentalmain.rentalmain.model.UserStatus;
 import com.xpro.rentalmain.rentalmain.model.UserType;
 import com.xpro.rentalmain.rentalmain.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Page;
@@ -18,6 +23,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 @Slf4j
@@ -29,6 +36,13 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private  TenantCapacityService tenantCapacityService;
+
+    @Lazy
+    @Autowired
+    private EligibilityService eligibilityService;
 
 
 
@@ -140,14 +154,12 @@ public class UserService {
         UserType finalRole = request.getUserRole();
         UUID finalCreatedBy = actorId;
 
-        // Check if any users exist in the system
         long userCount = userRepository.count();
 
         if (userCount == 0) {
             // BOOTSTRAP MODE: First user becomes System Admin automatically
             log.info("No users found. Registering initial System Administrator: {}", request.getUsername());
             finalRole = UserType.SYSTEM_ADMIN;
-            // Since there is no actor, we can set createdBy to null or a placeholder UUID
             finalCreatedBy = null;
         } else {
             // STANDARD MODE: Require an actor and check permissions
@@ -176,7 +188,7 @@ public class UserService {
             }
         }
 
-        // 3. MAP AND SAVE
+        // 3. MAP AND SAVE USER IDENTITY
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
@@ -185,12 +197,39 @@ public class UserService {
                 .lastName(request.getLastName())
                 .phoneNumber(request.getPhoneNumber())
                 .gender(request.getGender())
-                .role(finalRole) // Use the resolved role
+                .role(finalRole)
                 .userStatus(UserStatus.ACTIVE)
-                .createdBy(finalCreatedBy) // Use the resolved actorId (null for the first user)
+                .createdBy(finalCreatedBy)
                 .build();
 
-        return mapToResponse(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+
+        // 4. DOWNSTREAM LIFECYCLE INITIALIZATION FIX
+        // Automatically provision baseline records if the saved entity is a Tenant
+        if (savedUser.getRole() == UserType.TENANT) {
+            log.info("Initializing baseline credit and eligibility tracks for new Tenant: {}", savedUser.getId());
+
+            // Populate Tenant Capacity Row with zero baselines
+            TenantCapacityRequestDTO initialCapacity = new TenantCapacityRequestDTO(
+                    savedUser.getId(),
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    false
+            );
+            tenantCapacityService.createOrUpdate(initialCapacity);
+
+            try {
+                eligibilityService.processFullEligibility(savedUser.getId());
+                log.info("Successfully executed baseline full eligibility processing for tenant: {}", savedUser.getId());
+            } catch (Exception e) {
+                log.error("Failed to run baseline eligibility for user {}; tracking will catch up on next refresh.", savedUser.getId(), e);
+            }
+        }
+
+        return mapToResponse(savedUser);
     }
 
     @Transactional
