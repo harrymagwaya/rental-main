@@ -39,6 +39,9 @@ public class UserService {
     @Autowired
     private  TenantCapacityService tenantCapacityService;
 
+    @Autowired
+    private EligibilityService eligibilityService;
+
 
 
     // Helper method to convert Entity -> DTO (DRY Principle)
@@ -216,16 +219,12 @@ public class UserService {
             );
             tenantCapacityService.createOrUpdate(initialCapacity);
 
-            // Populate Eligibility Controls Row with safety locks and 'UNRATED' placeholder
-            Eligibility eligibility = Eligibility.builder()
-                    .tenantId(savedUser.getId())
-                    .currentMinLimit(BigDecimal.ZERO)
-                    .currentMaxLimit(BigDecimal.ZERO)
-                    .lastCalculatedBand(RiskBand.UNRATED)
-                    .isCalculationAllowed(true)
-                    .lastReviewedAt(LocalDateTime.now())
-                    .build();
-            eligibilityControlRepository.save(eligibility);
+            try {
+                eligibilityService.processFullEligibility(savedUser.getId());
+                log.info("Successfully executed baseline full eligibility processing for tenant: {}", savedUser.getId());
+            } catch (Exception e) {
+                log.error("Failed to run baseline eligibility for user {}; tracking will catch up on next refresh.", savedUser.getId(), e);
+            }
         }
 
         return mapToResponse(savedUser);
