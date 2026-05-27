@@ -15,6 +15,7 @@ import com.xpro.rentalmain.rentalmain.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Page;
@@ -39,6 +40,7 @@ public class UserService {
     @Autowired
     private  TenantCapacityService tenantCapacityService;
 
+    @Lazy
     @Autowired
     private EligibilityService eligibilityService;
 
