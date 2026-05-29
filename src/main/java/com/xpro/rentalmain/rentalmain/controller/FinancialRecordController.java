@@ -27,6 +27,12 @@ public class FinancialRecordController {
         return financialRecordService.attachRecordToTenant(request);
     }
 
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public List<FinancialRecordResponse> getAllRecords() {
+        return financialRecordService.getAllRecords();
+    }
+
     /**
      * GET: Retrieve a specific record
      */
