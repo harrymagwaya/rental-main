@@ -36,10 +36,6 @@ public class EligibilityController {
         return eligibilityService.processFullEligibility(tenantId);
     }
 
-    // =========================================================================
-    // CRUD OPERATIONS (Direct Returns, No ResponseEntity)
-    // =========================================================================
-
     /**
      * GET /api/v1/eligibility/tenant/{tenantId}/latest
      * Reads the latest cached eligibility snapshot for a specific tenant.

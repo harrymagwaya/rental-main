@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -253,5 +254,31 @@ public class PropertyService {
                 addressDto,
                 p.getUnits() != null ? p.getUnits().stream().map(this::mapToUnitResponse).toList() : List.of()
         );
+    }
+    // Inside PropertyService.java
+    @Transactional(readOnly = true)
+    public Optional<PropertyUnitResponse> getUnitByTenantOptional(UUID tenantId) {
+        log.info("Querying active rental profiles for tenant ID: {}", tenantId);
+
+        return rentalProfileRepo.findActiveByTenantId(tenantId)
+                .map(profile -> {
+                    // Safeguard against missing relationships
+                    UUID unitId = (profile.getUnit() != null) ? profile.getUnit().getId() : profile.getId();
+                    String unitNumber = (profile.getUnit() != null) ? profile.getUnit().getUnitNumber() : "UNASSIGNED";
+
+                    // Map LeaseStatus to your record's UnitStatus if applicable, or pass a default conversion
+                    com.xpro.rentalmain.rentalmain.model.UnitStatus viewStatus =
+                            (profile.getStatus() == RentalProfile.LeaseStatus.ACTIVE)
+                                    ? com.xpro.rentalmain.rentalmain.model.UnitStatus.OCCUPIED
+                                    : UnitStatus.VACANT;
+
+                    return new PropertyUnitResponse(
+                            unitId,
+                            unitNumber,
+                            profile.getAgreedRentAmount(), // Maps perfectly to rentAmount DTO field
+                            viewStatus,                    // Maps to UnitStatus status enum
+                            tenantId                       // Maps to tenantId
+                    );
+                });
     }
 }

@@ -1,12 +1,16 @@
 package com.xpro.rentalmain.rentalmain.service;
 
 import com.xpro.rentalmain.rentalmain.dto.TenantFeatureHistoryDTO;
+import com.xpro.rentalmain.rentalmain.entity.BehavioralFeatures;
+import com.xpro.rentalmain.rentalmain.entity.TenantFeatureLink;
+import com.xpro.rentalmain.rentalmain.repository.BehavioralFeaturesRepository;
 import com.xpro.rentalmain.rentalmain.repository.TenantFeatureLinkRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,6 +19,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional(readOnly = true) // Applies global read-only optimization to all methods
 public class TenantFeatureHistoryService {
+
+    private final BehavioralFeaturesRepository featureRepo;
 
     private final TenantFeatureLinkRepository linkRepo;
 
@@ -34,6 +40,7 @@ public class TenantFeatureHistoryService {
         return linkRepo.findFeatureHistoryByLinkId(linkId)
                 .orElseThrow(() -> new RuntimeException("Snapshot timeline record matching ID not found: " + linkId));
     }
+
 
     /**
      * Pulls a paginated global historical timeline across all tenants in the system.

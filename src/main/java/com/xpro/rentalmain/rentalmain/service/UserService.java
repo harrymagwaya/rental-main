@@ -44,6 +44,9 @@ public class UserService {
     @Autowired
     private EligibilityService eligibilityService;
 
+    @Autowired
+    private BehavioralFeaturesService behavioralFeaturesService;
+
 
 
     // Helper method to convert Entity -> DTO (DRY Principle)
@@ -222,6 +225,7 @@ public class UserService {
             tenantCapacityService.createOrUpdate(initialCapacity);
 
             try {
+                behavioralFeaturesService.initializeDefaultTenantFeatures(savedUser.getId());
                 eligibilityService.processFullEligibility(savedUser.getId());
                 log.info("Successfully executed baseline full eligibility processing for tenant: {}", savedUser.getId());
             } catch (Exception e) {

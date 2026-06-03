@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,6 +27,35 @@ public class BehavioralFeaturesService {
     // =========================
     // 1. ATTACHMENT LOGIC
     // =========================
+
+    @Transactional
+    public void initializeDefaultTenantFeatures(UUID tenantId) {
+        log.info("Provisioning fresh baseline behavioral footprint for new tenant: {}", tenantId);
+
+        // 1. Create default behavioral tracking values (ground-zero metrics)
+        BehavioralFeatures baselineEntity = new BehavioralFeatures();
+        baselineEntity.setRentConsistency(BigDecimal.ZERO);
+        baselineEntity.setUtilityPayments(BigDecimal.ZERO);
+        baselineEntity.setAirtimeUsage(BigDecimal.ZERO);
+        baselineEntity.setSavingsConsistency(BigDecimal.ZERO);
+        baselineEntity.setLoanRepaymentRate(BigDecimal.ZERO);
+        baselineEntity.setMobileMoneyVolume(BigDecimal.ZERO);
+        baselineEntity.setTransactionDiversity(BigDecimal.ZERO);
+        baselineEntity.setLengthOfResidence(BigDecimal.ZERO);
+
+        BehavioralFeatures savedSnapshot = featuresRepository.save(baselineEntity);
+        log.debug("Saved baseline BehavioralFeatures snapshot with ID: {}", savedSnapshot.getId());
+
+        // 2. Explicitly map and activate the link within the current transaction session
+        TenantFeatureLink activeLink = new TenantFeatureLink();
+        activeLink.setTenantId(tenantId);
+        activeLink.setFeatureSnapshotId(savedSnapshot.getId());
+        activeLink.setActive(true); // Explicitly setting active state
+
+        TenantFeatureLink savedLink = linkRepository.save(activeLink);
+        log.info("Successfully bound tenant [{}] to initial active tracking link [ID: {}]", tenantId, savedLink.getId());
+
+    }
 
     @Transactional
     public BehavioralFeatureDTO attachToTenant(UUID tenantId, UUID featureId) {
