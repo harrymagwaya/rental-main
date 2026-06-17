@@ -14,17 +14,22 @@ steps:
       commands: |
         set -e
 
-        cd /home/azureuser/rental-main
+        cd /home/magwayaVM/apps/rental-main
 
         echo "Pulling deploy-test branch..."
         git fetch origin deploy-test
+        git checkout deploy-test
         git reset --hard origin/deploy-test
 
         echo "Rebuilding Docker containers..."
+        docker compose down
         docker compose up -d --build
 
-        echo "Cleaning old Docker images..."
+        echo "Cleaning unused Docker images..."
         docker image prune -f
+
+        echo "Running containers:"
+        docker ps
 
         echo "Deployment complete."
       readyTimeout: '20000'
