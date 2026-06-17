@@ -165,29 +165,36 @@ public class UserService {
             finalRole = UserType.SYSTEM_ADMIN;
             finalCreatedBy = null;
         } else {
-            // STANDARD MODE: Require an actor and check permissions
-            if (actorId == null) {
-                throw new AccessDeniedException("Actor ID is missing. User must be authenticated to register others.");
-            }
+            boolean isSelfSignUpTenant = (actorId == null && request.getUserRole() == UserType.TENANT);
 
-            User actor = userRepository.findById(actorId)
-                    .orElseThrow(() -> new EntityNotFoundException("Actor not found"));
-
-            log.info("Actor {} is attempting to register a user with role: {}", actorId, request.getUserRole());
-
-            // Restriction: Only ADMIN or LANDLORD can create a TENANT
-            if (request.getUserRole() == UserType.TENANT) {
-                boolean isAuthorized = actor.getRole() == UserType.SYSTEM_ADMIN ||
-                        actor.getRole() == UserType.LANDLORD;
-
-                if (!isAuthorized) {
-                    throw new AccessDeniedException("Insufficient permissions: Only Landlords or Admins can register tenants.");
+            if (isSelfSignUpTenant) {
+                log.info("Public self-signup initiated for prospective Tenant: {}", request.getUsername());
+                // Safe to proceed, bypasses administrative actor validation
+            } else {
+                // PRIVILEGED REGISTRATION MODE: Active management session required
+                if (actorId == null) {
+                    throw new AccessDeniedException("Actor ID is missing. Administrative registrations must be authenticated.");
                 }
-            }
 
-            // Restriction: Only ADMIN can create another ADMIN
-            if (request.getUserRole() == UserType.SYSTEM_ADMIN && actor.getRole() != UserType.SYSTEM_ADMIN) {
-                throw new AccessDeniedException("Only System Administrators can create Admin accounts.");
+                User actor = userRepository.findById(actorId)
+                        .orElseThrow(() -> new EntityNotFoundException("Actor not found"));
+
+                log.info("Actor {} is attempting administrative registration for role: {}", actorId, request.getUserRole());
+
+                // Restriction 1: Only ADMIN or LANDLORD can create a TENANT
+                if (request.getUserRole() == UserType.TENANT) {
+                    boolean isAuthorized = actor.getRole() == UserType.SYSTEM_ADMIN ||
+                            actor.getRole() == UserType.LANDLORD;
+
+                    if (!isAuthorized) {
+                        throw new AccessDeniedException("Insufficient permissions: Only Landlords or Admins can register tenants.");
+                    }
+                }
+
+                // Restriction 2: Only ADMIN can create another ADMIN or LANDLORD
+                if (request.getUserRole() != UserType.TENANT && actor.getRole() != UserType.SYSTEM_ADMIN) {
+                    throw new AccessDeniedException("Only System Administrators can create administrative or landlord accounts.");
+                }
             }
         }
 
