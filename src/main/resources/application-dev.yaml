@@ -1,36 +1,33 @@
 server:
-  port: ${SERVER_PORT}
+  port: ${SERVER_PORT:8081}
 
 spring:
   application:
     name: rentalmain
-
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE}
 
   docker:
     compose:
       enabled: false
 
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+    url: jdbc:mysql://${DB_HOST:db}:${DB_PORT:3306}/${DB_NAME:rentalMain}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO}
-    show-sql: ${JPA_SHOW_SQL}
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:true}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: ${HIBERNATE_FORMAT_SQL}
+        format_sql: ${HIBERNATE_FORMAT_SQL:true}
 
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
 
   mail:
     host: ${MAIL_HOST}
@@ -44,27 +41,37 @@ spring:
           starttls:
             enable: true
 
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 5
+
 management:
   endpoints:
     web:
       exposure:
-        include: ${MANAGEMENT_ENDPOINTS}
+        include: ${MANAGEMENT_ENDPOINTS:health,info,metrics,prometheus,mappings}
   endpoint:
     health:
-      show-details: ${HEALTH_SHOW_DETAILS}
+      show-details: ${HEALTH_SHOW_DETAILS:always}
+  metrics:
+    export:
+      prometheus:
+        enabled: true
 
 logging:
   level:
-    root: ${LOG_LEVEL_ROOT}
-    com.xpro.rentalmain: ${LOG_LEVEL_APP}
-    org.springframework.web: ${LOG_LEVEL_WEB}
-    org.springframework.security: ${LOG_LEVEL_SECURITY}
-    org.springframework.orm.jpa: ${LOG_LEVEL_JPA}
-    org.hibernate.orm.jdbc.bind: ${LOG_LEVEL_HIBERNATE_BIND}
+    root: ${LOG_LEVEL_ROOT:info}
+    com.xpro.rentalmain: ${LOG_LEVEL_APP:debug}
+    org.springframework.web: ${LOG_LEVEL_WEB:debug}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:debug}
+    org.springframework.orm.jpa: ${LOG_LEVEL_JPA:debug}
+    org.hibernate.orm.jdbc.bind: ${LOG_LEVEL_HIBERNATE_BIND:trace}
 
 app:
   security:
     system-secret: ${SYSTEM_SECRET}
     jwt:
       secret: ${SYSTEM_SECRET}
-      expiration: ${JWT_EXPIRATION}
+      expiration: ${JWT_EXPIRATION:9000000}
