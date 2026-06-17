@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -45,15 +46,17 @@ public class EligibilityService {
         Eligibility control = controlRepo.findByTenantId(tenantId)
                 .orElseGet(() -> createDefaultControl(tenantId));
 
-        // DEFENSIVE FIX: Handle thin-file or unassigned rental units gracefully
+        // TRANSACTION SAFE FIX: Avoid try-catch for expected missing data profiles
         BigDecimal expectedRent = BigDecimal.ZERO;
-        try {
-            PropertyUnitResponse unit = propertyService.getUnitByTenant(tenantId);
-            if (unit != null && unit.rentAmount() != null) {
-                expectedRent = unit.rentAmount();
-            }
-        } catch (Exception e) {
-            log.warn("No active property unit found for tenant: {}. Defaulting rent footprint to 0.", tenantId);
+
+        // Rewrite this method signature to return an Optional to prevent proxy exceptions
+        Optional<PropertyUnitResponse> unitOpt = propertyService.getUnitByTenantOptional(tenantId);
+
+        if (unitOpt.isPresent() && unitOpt.get().rentAmount() != null) {
+            expectedRent = unitOpt.get().rentAmount();
+            log.info("Active lease profile found. Factoring rent valuation of {} into eligibility calculation.", expectedRent);
+        } else {
+            log.warn("No active property unit found for tenant: {}. Defaulting rent footprint variables to 0.", tenantId);
         }
 
         // 2. GATEKEEPER
@@ -61,7 +64,7 @@ public class EligibilityService {
             return mapToDeniedResponse(riskDto, "Calculation blocked by Administrator.");
         }
 
-        // 3. CALCULATE FOOTPRINT (Safe from null pointers)
+        // 3. CALCULATE FOOTPRINT
         BigDecimal footprint = calculateFootprint(capacity, expectedRent);
         BigDecimal maxLimit = calculateMaxLimit(footprint, riskDto.riskBand());
 
@@ -149,18 +152,20 @@ public class EligibilityService {
         TenantCapacity capacity = capacityRepo.findByTenantId(tenantId)
                 .orElseThrow(() -> new RuntimeException("Financial capacity data missing"));
 
-        // 4. Handle expected rent calculations safely for unassigned units
+        // 4. TRANSACTION SAFE FIX: Avoid try-catch block by unboxing an Optional
         BigDecimal expectedRent = BigDecimal.ZERO;
-        try {
-            PropertyUnitResponse unit = propertyService.getUnitByTenant(tenantId);
-            if (unit != null && unit.rentAmount() != null) {
+        Optional<PropertyUnitResponse> unitOpt = propertyService.getUnitByTenantOptional(tenantId);
+
+        if (unitOpt.isPresent()) {
+            PropertyUnitResponse unit = unitOpt.get();
+            if (unit.rentAmount() != null) {
                 expectedRent = unit.rentAmount();
             }
-        } catch (Exception e) {
-            log.warn("No active property unit found when reading footprint for tenant: {}. Defaulting rent to 0.", tenantId);
+        } else {
+            log.warn("No active property unit found when reading footprint for tenant: {}. Defaulting rent footprint calculation to 0.", tenantId);
         }
 
-        // FIXED: Use your actual internal service helper method instead of the placeholder
+        // Calculate real live footprint safely
         BigDecimal realFootprint = calculateFootprint(capacity, expectedRent);
 
         return new EligibilityResponseDTO(
@@ -169,7 +174,7 @@ public class EligibilityService {
                 riskDto.riskBand(),
                 riskDto.riskCategory(),
                 capacity.getMonthlyIncome(),
-                realFootprint, // Clean, mathematically sound live data
+                realFootprint,
                 control.getCurrentMinLimit(),
                 control.getCurrentMaxLimit(),
                 control.isCalculationAllowed(),

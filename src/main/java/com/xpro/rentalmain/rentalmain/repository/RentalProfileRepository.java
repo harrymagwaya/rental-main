@@ -11,7 +11,13 @@ import java.util.UUID;
 
 public interface RentalProfileRepository extends JpaRepository<RentalProfile, UUID> {
 
-    List<RentalProfile> findByTenantId(UUID tenantId);
+//    List<RentalProfile> findByTenantId(UUID tenantId);
+
+    // Keeps history tracking intact if you ever need to view past leases
+//    List<RentalProfile> findAllByTenantId(UUID tenantId);
+
+    // Inside RentalProfileRepository.java or similar
+    Optional<RentalProfile> findByTenantId(UUID tenantId);
 
     /**
      * Finds the active lease by checking the status enum

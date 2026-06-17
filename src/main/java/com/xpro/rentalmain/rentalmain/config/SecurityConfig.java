@@ -83,7 +83,8 @@ public class SecurityConfig {
                 "Authorization",
                 "Cache-Control",
                 "Content-Type",
-                "X-APP"  // <--- Must match Constants.APP_NAME exactly
+                "X-APP",  // <--- Must match Constants.APP_NAME exactly
+                "actor_id"
         ));
 
         configuration.setAllowCredentials(true);

@@ -74,6 +74,15 @@ public class FinancialRecordService {
         return mapToResponse(savedRecord);
     }
 
+    @Transactional(readOnly = true)
+    public List<FinancialRecordResponse> getAllRecords() {
+        log.info("Fetching all systemic financial transaction records.");
+        return recordRepo.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
     /**
      * READ: Get single record details.
      */
