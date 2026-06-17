@@ -38,3 +38,7 @@ build/
 .gradle/
 build/
 
+.env. example
+.env.local
+.env.prod
+

@@ -1,24 +1,30 @@
 trigger:
-  - main
+  branches:
+    include:
+      - deploy-test
 
 pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-  # 1. Build the JAR (Optional if you do it inside the Docker build)
-  - task: Maven@4
-    inputs:
-      mavenPomFile: 'pom.xml'
-      goals: 'clean package'
-      options: '-DskipTests'
-
-  # 2. Copy the code to the VM and Run Docker
   - task: SSH@0
     inputs:
-      sshEndpoint: 'RentalVMConnection' # The name of the connection you created
+      sshEndpoint: 'RentalVMConnection'
       runOptions: 'commands'
       commands: |
+        set -e
+
         cd /home/azureuser/rental-main
-        git pull origin main
-        docker-compose up -d --build
+
+        echo "Pulling deploy-test branch..."
+        git fetch origin deploy-test
+        git reset --hard origin/deploy-test
+
+        echo "Rebuilding Docker containers..."
+        docker compose up -d --build
+
+        echo "Cleaning old Docker images..."
+        docker image prune -f
+
+        echo "Deployment complete."
       readyTimeout: '20000'
