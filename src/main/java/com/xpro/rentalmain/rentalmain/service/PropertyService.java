@@ -194,15 +194,22 @@ public class PropertyService {
     public PropertyUnitResponse getUnitByTenant(UUID tenantId) {
         log.info("Fetching unit for tenant via Repository: {}", tenantId);
 
-        // 1. Query the DB directly for the active profile
-        RentalProfile profile = rentalProfileRepo.findByTenantId(tenantId)
+        return rentalProfileRepo.findByTenantId(tenantId)
                 .stream()
                 .filter(p -> p.getStatus() == RentalProfile.LeaseStatus.ACTIVE)
                 .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("No active lease found for tenant: " + tenantId));
+                .map(profile -> {
+                    if (profile.getUnit() == null) {
+                        log.warn("Active lease found for tenant {} but no unit is assigned.", tenantId);
+                        return null;
+                    }
 
-        // 2. Return the unit details
-        return getUnitById(profile.getUnit().getId());
+                    return getUnitById(profile.getUnit().getId());
+                })
+                .orElseGet(() -> {
+                    log.warn("No active lease found for tenant: {}. Returning null unit.", tenantId);
+                    return null;
+                });
     }
 
     @Transactional(readOnly = true)
