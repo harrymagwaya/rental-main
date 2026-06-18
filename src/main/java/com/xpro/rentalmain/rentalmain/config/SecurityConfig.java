@@ -82,7 +82,7 @@ public class SecurityConfig {
                 "http://localhost:8081",
                 "http://102.37.122.30",
                 "https://*.vercel.app"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT","PATCH",  "DELETE", "OPTIONS"));
 
         // Update this list to include "X-APP"
         configuration.setAllowedHeaders(List.of(
